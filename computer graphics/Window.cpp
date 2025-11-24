@@ -1,4 +1,4 @@
-#include "Window.h"
+#include "./includes/Window.h"
 
 Window* window;
 
@@ -32,7 +32,19 @@ void Window::create(int window_width, int window_height, std::string window_name
 	window = this;
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam){
+
+
+void Window::processMessages() {
+	MSG msg;
+	ZeroMemory(&msg, sizeof(MSG));
+	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg)
 	{
 	case WM_DESTROY:
@@ -78,16 +90,5 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam){
 	{
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
-	}
-}
-
-
-
-void Window::processMessages() {
-	MSG msg;
-	ZeroMemory(&msg, sizeof(MSG));
-	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
 	}
 }

@@ -1,8 +1,4 @@
 #pragma once
-#define _USE_MATH_DEFINES
-#include <cmath>
-#include <algorithm>
-#include "GamesEngineeringBase.h"
 #include "Matrix.h"
 using namespace std;
 
