@@ -9,29 +9,29 @@ using namespace std;
 
 class Mat4 {
 public:
-	double m[4][4];
+	float m[4][4];
 	Mat4()
 	{
 		for (int i = 0; i < 4; i++)
 			for (int j = 0; j < 4; j++)
-				m[i][j] = 0.0;
+				m[i][j] = 0.0f;
 	}
 
 	Mat4 _Identity()
 	{
 		Mat4 mat;
 		for (int i = 0; i < 4; i++)
-			mat.m[i][i] = 1.0;
+			mat.m[i][i] = 1.0f;
 		return mat;
 	}
 
-	double& operator[](int index)
+	float& operator[](int index)
 	{
 		int row = index / 4;
 		int col = index % 4;
 		return m[row][col];
 	}
-	double& operator()(int row, int col)
+	float& operator()(int row, int col)
 	{
 		return m[row][col];
 	}
@@ -49,7 +49,7 @@ public:
 		}
 		return result;
 	}
-	Mat4& operator*(double val)
+	Mat4& operator*(float val)
 	{
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
@@ -137,37 +137,37 @@ public:
 		return result;
 	}
 
-	Mat4 RotateX(double angle)
+	Mat4 RotateX(float angle)
 	{
 		Mat4 mat = _Identity();
-		double rad = angle * (double)M_PI / 180.0;
-		double c = cosf(rad);
-		double s = sinf(rad);
+		float rad = angle * (float)M_PI / 180.0f;
+		float c = cosf(rad);
+		float s = sinf(rad);
 		mat.m[1][1] = c;  mat.m[1][2] = -s;
 		mat.m[2][1] = s;  mat.m[2][2] = c;
 		return mat;
 	}
-	Mat4 RotateY(double angle)
+	Mat4 RotateY(float angle)
 	{
 		Mat4 mat = _Identity();
-		double rad = angle * (double)M_PI / 180.0;
-		double c = cosf(rad);
-		double s = sinf(rad);
+		float rad = angle * (float)M_PI / 180.0f;
+		float c = cosf(rad);
+		float s = sinf(rad);
 		mat.m[0][0] = c;  mat.m[0][2] = s;
 		mat.m[2][0] = -s;  mat.m[2][2] = c;
 		return mat;
 	}
-	Mat4 RotateZ(double angle)
+	Mat4 RotateZ(float angle)
 	{
 		Mat4 mat = _Identity();
-		double rad = angle * (double)M_PI / 180.0;
-		double c = cosf(rad);
-		double s = sinf(rad);
+		float rad = angle * (float)M_PI / 180.0f;
+		float c = cosf(rad);
+		float s = sinf(rad);
 		mat.m[0][0] = c;  mat.m[0][1] = -s;
 		mat.m[1][0] = s;  mat.m[1][1] = c;
 		return mat;
 	}
-	Mat4 Translate(double x, double y, double z)
+	Mat4 Translate(float x, float y, float z)
 	{
 		Mat4 mat = _Identity();
 		mat.m[0][3] = x;
@@ -175,7 +175,7 @@ public:
 		mat.m[2][3] = z;
 		return mat;
 	}
-	Mat4 Scale(double x, double y, double z)
+	Mat4 Scale(float x, float y, float z)
 	{
 		Mat4 mat = _Identity();
 		mat.m[0][0] = x;
@@ -188,12 +188,12 @@ public:
 	{
 		Mat4 original = *this;
 		Mat4 inv;
-		double det = original[0] * original[0] + original[1] * original[4] + original[2] * original[8] + original[3] * original[12];
+		float det = original[0] * original[0] + original[1] * original[4] + original[2] * original[8] + original[3] * original[12];
 		if (det == 0) {
 			std::cout << "Matrix inversion failed: determinant is zero." << std::endl;
 			return inv;
 		}
-		det = 1.0 / det;
+		det = 1.0f / det;
 		inv[0] = original[5] * original[10] * original[15] - original[5] * original[11] * original[14] - original[9] * original[6] * original[15] + original[9] * original[7] * original[14] + original[13] * original[6] * original[11] - original[13] * original[7] * original[10];
 		inv[4] = -original[4] * original[10] * original[15] + original[4] * original[11] * original[14] + original[8] * original[6] * original[15] - original[8] * original[7] * original[14] - original[12] * original[6] * original[11] + original[12] * original[7] * original[10];
 		inv[8] = original[4] * original[9] * original[15] - original[4] * original[11] * original[13] - original[8] * original[5] * original[15] + original[8] * original[7] * original[13] + original[12] * original[5] * original[11] - original[12] * original[7] * original[9];

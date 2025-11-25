@@ -2,17 +2,20 @@
 #include "Mesh.h"
 #include "Operators.h"
 
+#define ScreenWidth 480
+#define ScreenHeight 270
+
 
 class Camera {
 public:
 	Vec4 position;
 	Vec4 outcoming;
 	Vec4 up;
-	double fov;
-	double clipNear;
-	double clipFar;
+	float fov;
+	float clipNear;
+	float clipFar;
 
-	Camera() : position(0.0, 0.0, 50.0, 1.0), outcoming(0.0, 1.0, -1.0, 1.0), up(0.0, 0.0, 1.0, 1.0), fov(90.0), clipNear(0.1), clipFar(1000.0) {
+	Camera() : position(0.0f, 0.0f, 50.0f, 1.0f), outcoming(0.0f, 1.0f, -1.0f, 1.0f), up(0.0f, 0.0f, 1.0f, 1.0f), fov(90.0f), clipNear(0.1f), clipFar(100.0f) {
 		Vec4 tangent = up.cross(outcoming).normalize();
 	}
 
@@ -47,26 +50,26 @@ public:
 	{
 		Vec4 transformed = projection.transform(getLookatMatrix());
 		//Perspective projection
-		double aspectRatio = static_cast<double>(ScreenWidth / ScreenHeight); //window size
-		double fovRad = 1.0 / tanf((fov * 0.5) * (double)M_PI / 180.0);
+		float aspectRatio = static_cast<float>(ScreenWidth / ScreenHeight); //window size
+		float fovRad = 1.0f / tanf((fov * 0.5f) * (float)M_PI / 180.0f);
 		Mat4 projectionMatrix = Mat4()._Identity();
 		projectionMatrix.m[0][0] = aspectRatio * fovRad;
 		projectionMatrix.m[1][1] = fovRad;
 		projectionMatrix.m[2][2] = clipFar / (clipFar - clipNear);
 		projectionMatrix.m[2][3] = (-clipFar * clipNear) / (clipFar - clipNear);
-		projectionMatrix.m[3][2] = 1.0;
+		projectionMatrix.m[3][2] = 1.0f;
 		Vec4 projected = transformed.transform(projectionMatrix);
-		//Normalize to screen space
+		//Normalize to camera space
 		projected.v[0] /= projected.v[3];
 		projected.v[1] /= projected.v[3];
 		projected.v[2] /= projected.v[3];
 
 		/*Vec4 distanceVec = projection - position;
-		double distance = distanceVec.getLength();
+		float distance = distanceVec.getLength();
 		if (outcoming.normalize().Dot(distanceVec.normalize()) <= 0 || distance < clipNear || distance > clipFar)
-			projected.v[3] = -1.0; //not visible
+			projected.v[3] = -1.0f; //not visible
 		else
-			projected.v[3] = remap(distance, clipNear, clipFar, 0.0, 255.0); //visible with depth info*/
+			projected.v[3] = remap(distance, clipNear, clipFar, 0.0f, 255.0f); //visible with depth info*/
 
 		return projected;
 	}
@@ -77,16 +80,16 @@ public:
 
 class Buffer {
 	Vec3* colorBuffer;
-	double* depthBuffer;
+	float* depthBuffer;
 	int width;
 	int height;
 public:
 	Buffer(int pWidth, int pHeight) : width(pWidth), height(pHeight) {
 		colorBuffer = new Vec3[width * height];
-		depthBuffer = new double[width * height];
+		depthBuffer = new float[width * height];
 	}
 	Vec3* getColorBuffer() { return colorBuffer; }
-	double* getDepthBuffer() { return depthBuffer; }
+	float* getDepthBuffer() { return depthBuffer; }
 	void clearColorBuffer(const Vec3& clearColor) {
 		for (int i = 0; i < width * height; i++) {
 			colorBuffer[i] = clearColor;
@@ -98,7 +101,7 @@ public:
 		}
 	}
 	void clear(){
-		clearColorBuffer(Vec3(0.0, 0.0, 0.0));
+		clearColorBuffer(Vec3(0.0f, 0.0f, 0.0f));
 		clearDepthBuffer();
 	}
 	~Buffer() {
@@ -115,35 +118,35 @@ public:
 		tri_transformed.color1 = triangle.color1;
 		tri_transformed.color2 = triangle.color2;
 		//Convert to screen coordinates
-		tri_transformed.v0.v[0] = (tri_transformed.v0.v[0] + 1.0) * 0.5 * ScreenWidth;
-		tri_transformed.v0.v[1] = (1.0 - (tri_transformed.v0.v[1] + 1.0) * 0.5) * ScreenHeight;
+		tri_transformed.v0.v[0] = (tri_transformed.v0.v[0] + 1.0f) * 0.5f * ScreenWidth;
+		tri_transformed.v0.v[1] = (1.0f - (tri_transformed.v0.v[1] + 1.0f) * 0.5f) * ScreenHeight;
 		tri_transformed.v0.v[2] = 0;
-		tri_transformed.v1.v[0] = (tri_transformed.v1.v[0] + 1.0) * 0.5 * ScreenWidth;
-		tri_transformed.v1.v[1] = (1.0 - (tri_transformed.v1.v[1] + 1.0) * 0.5) * ScreenHeight;
+		tri_transformed.v1.v[0] = (tri_transformed.v1.v[0] + 1.0f) * 0.5f * ScreenWidth;
+		tri_transformed.v1.v[1] = (1.0f - (tri_transformed.v1.v[1] + 1.0f) * 0.5f) * ScreenHeight;
 		tri_transformed.v1.v[2] = 0;
-		tri_transformed.v2.v[0] = (tri_transformed.v2.v[0] + 1.0) * 0.5 * ScreenWidth;
-		tri_transformed.v2.v[1] = (1.0 - (tri_transformed.v2.v[1] + 1.0) * 0.5) * ScreenHeight;
+		tri_transformed.v2.v[0] = (tri_transformed.v2.v[0] + 1.0f) * 0.5f * ScreenWidth;
+		tri_transformed.v2.v[1] = (1.0f - (tri_transformed.v2.v[1] + 1.0f) * 0.5f) * ScreenHeight;
 		tri_transformed.v2.v[2] = 0;
 		//Calculate distance
-		double distance0 = remap((triangle.v0 - camera.position).getLength(), camera.clipNear, camera.clipFar, 0.0, 255.0)
+		float distance0 = remap((triangle.v0 - camera.position).getLength(), camera.clipNear, camera.clipFar, 0.0f, 255.0f)
 			* (camera.outcoming.normalize().Dot((triangle.v0 - camera.position).normalize()) >= 0 ? 1 : -1);
-		double distance1 = remap((triangle.v1 - camera.position).getLength(), camera.clipNear, camera.clipFar, 0.0, 255.0)
+		float distance1 = remap((triangle.v1 - camera.position).getLength(), camera.clipNear, camera.clipFar, 0.0f, 255.0f)
 			* (camera.outcoming.normalize().Dot((triangle.v1 - camera.position).normalize()) >= 0 ? 1 : -1);
-		double distance2 = remap((triangle.v2 - camera.position).getLength(), camera.clipNear, camera.clipFar, 0.0, 255.0)
+		float distance2 = remap((triangle.v2 - camera.position).getLength(), camera.clipNear, camera.clipFar, 0.0f, 255.0f)
 			* (camera.outcoming.normalize().Dot((triangle.v2 - camera.position).normalize()) >= 0 ? 1 : -1);
 		//Rasterization
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
-				Vec4 point(static_cast<double>(x), static_cast<double>(y), 0.0, 1.0);
+				Vec4 point(static_cast<float>(x), static_cast<float>(y), 0.0f, 1.0f);
 				Vec4 checkInfo = tri_transformed.checkPointInside(point);
 				if (checkInfo.v[3] > 0) { //inside triangle (alpha, beta, gamma, inside)
 					//correct depth value
-					double depth = perspectiveCorrectInterpolateAttribute(distance0, distance1, distance2,
+					float depth = perspectiveCorrectInterpolateAttribute(distance0, distance1, distance2,
 						tri_transformed.v0.v[3], tri_transformed.v1.v[3], tri_transformed.v2.v[3],
 						checkInfo.v[0], checkInfo.v[1], checkInfo.v[2]);
 					//Interpolate color
 					int index = y * width + x;
-					if (depth < depthBuffer[index] && depth >= 0) {
+					if (depth < depthBuffer[index] && depth >= camera.clipNear) {
 						depthBuffer[index] = depth;
 						Vec3 colorDepth = perspectiveCorrectInterpolateAttribute(triangle.color0, triangle.color1, triangle.color2,
 							tri_transformed.v0.v[3], tri_transformed.v1.v[3], tri_transformed.v2.v[3],

@@ -6,9 +6,9 @@ using namespace std;
 
 class Vec3 {
 public:
-	double v[3];
-	Vec3() : v{ 0.0, 0.0, 0.0 } {}
-	Vec3(double x, double y, double z) : v{ x, y, z } {}
+	float v[3];
+	Vec3() : v{ 0.0f, 0.0f, 0.0f } {}
+	Vec3(float x, float y, float z) : v{ x, y, z } {}
 
 	Vec3 operator+(const Vec3& pVec) const
 	{
@@ -25,11 +25,11 @@ public:
 	{
 		return Vec3(v[0] * pVec.v[0], v[1] * pVec.v[1], v[2] * pVec.v[2]);
 	}
-	Vec3 operator*(const double val) const
+	Vec3 operator*(const float val) const
 	{
 		return Vec3(v[0] * val, v[1] * val, v[2] * val);
 	}
-	Vec3 operator/(const double val) const
+	Vec3 operator/(const float val) const
 	{
 		return Vec3(v[0] / val, v[1] / val, v[2] / val);
 	}
@@ -40,18 +40,18 @@ public:
 
 	Vec3 normalize(void)
 	{
-		double len = 1.0 / sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+		float len = 1.0f / sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 		return Vec3(v[0] * len, v[1] * len, v[2] * len);
 	}
-	double normalize_GetLength()
+	float normalize_GetLength()
 	{
-		double length = sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-		double len = 1.0 / length;
+		float length = sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+		float len = 1.0f / length;
 		v[0] *= len; v[1] *= len; v[2] *= len;
 		return length;
 	}
 
-	double Dot(const Vec3& pVec) const
+	float Dot(const Vec3& pVec) const
 	{
 		return v[0] * pVec.v[0] + v[1] * pVec.v[1] + v[2] * pVec.v[2];
 	}
@@ -65,7 +65,7 @@ public:
 
 };
 
-double Dot(const Vec3& v1, const Vec3& v2)
+float Dot(const Vec3& v1, const Vec3& v2)
 {
 	return v1.v[0] * v2.v[0] + v1.v[1] * v2.v[1] + v1.v[2] * v2.v[2];
 }
@@ -81,9 +81,9 @@ Vec3 Max(const Vec3& v1, const Vec3& v2)
 
 class Vec4 {
 public:
-	double v[4];
-	Vec4() : v{ 0.0, 0.0, 0.0, 0.0 } {}
-	Vec4(double x, double y, double z, double w) : v{ x, y, z, w } {}
+	float v[4];
+	Vec4() : v{ 0.0f, 0.0f, 0.0f, 0.0f } {}
+	Vec4(float x, float y, float z, float w) : v{ x, y, z, w } {}
 
 	Vec4 operator+(const Vec4& pVec) const
 	{
@@ -113,11 +113,11 @@ public:
 	{
 		return Vec4(v[0] * pVec.v[0], v[1] * pVec.v[1], v[2] * pVec.v[2], v[3] * pVec.v[3]);
 	}
-	Vec4 operator*(const double val) const
+	Vec4 operator*(const float val) const
 	{
 		return Vec4(v[0] * val, v[1] * val, v[2] * val, v[3] * val);
 	}
-	Vec4 operator/(const double val) const
+	Vec4 operator/(const float val) const
 	{
 		return Vec4(v[0] / val, v[1] / val, v[2] / val, v[3] / val);
 	}
@@ -127,11 +127,11 @@ public:
 	}
 
 	Vec4 normalize(void) {
-		double len = 1.0 / sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3]);
+		float len = 1.0f / sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3]);
 		return Vec4(v[0] * len, v[1] * len, v[2] * len, v[3] * len);
 	}
 
-	double Dot(const Vec4& pVec) const
+	float Dot(const Vec4& pVec) const
 	{
 		return v[0] * pVec.v[0] + v[1] * pVec.v[1] + v[2] * pVec.v[2] + v[3] * pVec.v[3];
 	}
@@ -144,7 +144,7 @@ public:
 			0.0f);
 	}
 
-	double getLength() const
+	float getLength() const
 	{
 		return sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3]);
 	}

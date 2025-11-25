@@ -3,8 +3,6 @@
 #include "Vector.h"
 #include "Operators.h"
 
-#define ScreenWidth 960
-#define ScreenHeight 540
 
 
 class Triangle {
@@ -52,33 +50,33 @@ public:
 		//Calculate area of the triangle
 		Vec4 v0v1 = v1 - v0;
 		Vec4 v0v2 = v2 - v0;
-		v0v1.v[2] = 0.0;
-		v0v2.v[2] = 0.0;
+		//v0v1.v[2] = 0.0f;
+		//v0v2.v[2] = 0.0f;
 		Vec4 n = v0v1.cross(v0v2);
-		double area = sqrtf(n.v[0] * n.v[0] + n.v[1] * n.v[1] + n.v[2] * n.v[2]) / 2.0;
+		float area = sqrtf(n.v[0] * n.v[0] + n.v[1] * n.v[1] + n.v[2] * n.v[2]) / 2.0f;
 		//Calculate area of sub-triangles
 		Vec4 v0p = point - v0;
 		Vec4 v1p = point - v1;
 		Vec4 v2p = point - v2;
-		v0p.v[2] = 0.0;
-		v1p.v[2] = 0.0;
-		v2p.v[2] = 0.0;
+		//v0p.v[2] = 0.0f;
+		//v1p.v[2] = 0.0f;
+		//v2p.v[2] = 0.0f;
 		Vec4 n0 = v0p.cross(v1p);
 		Vec4 n1 = v0p.cross(v2p);
 		Vec4 n2 = v1p.cross(v2p);
-		double area0 = sqrtf(n0.v[0] * n0.v[0] + n0.v[1] * n0.v[1] + n0.v[2] * n0.v[2]) / 2.0;
-		double area1 = sqrtf(n1.v[0] * n1.v[0] + n1.v[1] * n1.v[1] + n1.v[2] * n1.v[2]) / 2.0;
-		double area2 = sqrtf(n2.v[0] * n2.v[0] + n2.v[1] * n2.v[1] + n2.v[2] * n2.v[2]) / 2.0;
-		double areaSum = area0 + area1 + area2;
+		float area0 = sqrtf(n0.v[0] * n0.v[0] + n0.v[1] * n0.v[1] + n0.v[2] * n0.v[2]) / 2.0f;
+		float area1 = sqrtf(n1.v[0] * n1.v[0] + n1.v[1] * n1.v[1] + n1.v[2] * n1.v[2]) / 2.0f;
+		float area2 = sqrtf(n2.v[0] * n2.v[0] + n2.v[1] * n2.v[1] + n2.v[2] * n2.v[2]) / 2.0f;
+		float areaSum = area0 + area1 + area2;
 		//Barycentric coordinates for color interpolation
-		double alpha = area1 / area;
-		double beta = area2 / area;
-		double gamma = area0 / area;
+		float alpha = area1 / area;
+		float beta = area2 / area;
+		float gamma = area0 / area;
 
-		if (fabs(area - areaSum) <= 0.1)
-			return Vec4(alpha, beta, gamma, 1.0); // inside
+		if (fabs(area - areaSum) <= 0.1f)
+			return Vec4(alpha, beta, gamma, 1.0f); // inside
 		else
-			return Vec4(alpha, beta, gamma, 0.0); // outside
+			return Vec4(alpha, beta, gamma, 0.0f); // outside
 	}
 
 };

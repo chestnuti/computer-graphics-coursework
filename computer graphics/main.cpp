@@ -58,37 +58,37 @@ int main()
 {
 	/*//initialize a triangle
 	Triangle tri(
-		Vec4(200.0, 200.0, 0.0, 1.0),
-		Vec4(150.0, 300.0, 0.0, 1.0),
-		Vec4(250.0, 300.0, 0.0, 1.0),
-		Vec3(255.0, 0.0, 0.0),
-		Vec3(0.0, 255.0, 0.0),
-		Vec3(0.0, 0.0, 255.0)
+		Vec4(200.0f, 200.0f, 0.0f, 1.0f),
+		Vec4(150.0f, 300.0f, 0.0f, 1.0f),
+		Vec4(250.0f, 300.0f, 0.0f, 1.0f),
+		Vec3(255.0f, 0.0f, 0.0f),
+		Vec3(0.0f, 255.0f, 0.0f),
+		Vec3(0.0f, 0.0f, 255.0f)
 	);
 
 	Triangle axisX(
-		Vec4(0.0, 0.0, 0.0, 1.0),
-		Vec4(100.0, 0.0, 0.0, 1.0),
-		Vec4(100.0, 10.0, 0.0, 1.0),
-		Vec3(255.0, 0.0, 0.0),
-		Vec3(255.0, 0.0, 0.0),
-		Vec3(255.0, 0.0, 0.0)
+		Vec4(0.0f, 0.0f, 0.0f, 1.0f),
+		Vec4(100.0f, 0.0f, 0.0f, 1.0f),
+		Vec4(100.0f, 10.0f, 0.0f, 1.0f),
+		Vec3(255.0f, 0.0f, 0.0f),
+		Vec3(255.0f, 0.0f, 0.0f),
+		Vec3(255.0f, 0.0f, 0.0f)
 	);
 	Triangle axisY(
-		Vec4(0.0, 0.0, 0.0, 1.0),
-		Vec4(0.0, 100.0, 0.0, 1.0),
-		Vec4(10.0, 100.0, 0.0, 1.0),
-		Vec3(0.0, 255.0, 0.0),
-		Vec3(0.0, 255.0, 0.0),
-		Vec3(0.0, 255.0, 0.0)
+		Vec4(0.0f, 0.0f, 0.0f, 1.0f),
+		Vec4(0.0f, 100.0f, 0.0f, 1.0f),
+		Vec4(10.0f, 100.0f, 0.0f, 1.0f),
+		Vec3(0.0f, 255.0f, 0.0f),
+		Vec3(0.0f, 255.0f, 0.0f),
+		Vec3(0.0f, 255.0f, 0.0f)
 	);
 	Triangle axisZ(
-		Vec4(0.0, 0.0, 0.0, 1.0),
-		Vec4(0.0, 0.0, 100.0, 1.0),
-		Vec4(0.0, 10.0, 100.0, 1.0),
-		Vec3(0.0, 0.0, 255.0),
-		Vec3(0.0, 0.0, 255.0),
-		Vec3(0.0, 0.0, 255.0)
+		Vec4(0.0f, 0.0f, 0.0f, 1.0f),
+		Vec4(0.0f, 0.0f, 100.0f, 1.0f),
+		Vec4(0.0f, 10.0f, 100.0f, 1.0f),
+		Vec3(0.0f, 0.0f, 255.0f),
+		Vec3(0.0f, 0.0f, 255.0f),
+		Vec3(0.0f, 0.0f, 255.0f)
 	);
 
 	Triangle* Triangles[4];
@@ -100,7 +100,7 @@ int main()
 	//GEM model loading test
 	std::vector<GEMLoader::GEMMesh> gemmeshes;
 	GEMLoader::GEMModelLoader loader;
-	loader.load("./Resources Lecture 2/bunny.gem", gemmeshes);
+	loader.load("./Resources Lecture 2/cube.gem", gemmeshes);
 	std::vector<Vec3> vertexList;
 	std::vector<Colour> colorList;
 	for (int i = 0; i < gemmeshes.size(); i++) {
@@ -118,9 +118,9 @@ int main()
 	Triangle* Triangles = new Triangle[triangleCount];
 	for (int i = 0; i < vertexList.size() / 3; i++) {
 		Triangles[i] = Triangle(
-			Vec4(vertexList[i * 3 + 0].v[0], vertexList[i * 3 + 0].v[1], vertexList[i * 3 + 0].v[2], 1.0),
-			Vec4(vertexList[i * 3 + 1].v[0], vertexList[i * 3 + 1].v[1], vertexList[i * 3 + 1].v[2], 1.0),
-			Vec4(vertexList[i * 3 + 2].v[0], vertexList[i * 3 + 2].v[1], vertexList[i * 3 + 2].v[2], 1.0),
+			Vec4(vertexList[i * 3 + 0].v[0], vertexList[i * 3 + 0].v[1], vertexList[i * 3 + 0].v[2], 1.0f),
+			Vec4(vertexList[i * 3 + 1].v[0], vertexList[i * 3 + 1].v[1], vertexList[i * 3 + 1].v[2], 1.0f),
+			Vec4(vertexList[i * 3 + 2].v[0], vertexList[i * 3 + 2].v[1], vertexList[i * 3 + 2].v[2], 1.0f),
 			Vec3(colorList[i * 3 + 0].r * 255.0f, colorList[i * 3 + 0].g * 255.0f, colorList[i * 3 + 0].b * 255.0f),
 			Vec3(colorList[i * 3 + 1].r * 255.0f, colorList[i * 3 + 1].g * 255.0f, colorList[i * 3 + 1].b * 255.0f),
 			Vec3(colorList[i * 3 + 2].r * 255.0f, colorList[i * 3 + 2].g * 255.0f, colorList[i * 3 + 2].b * 255.0f)
@@ -159,19 +159,19 @@ int main()
 			if (deltaX != 0 || deltaY != 0)
 			{
 				//Yaw rotation
-				double yawAngle = deltaX * 0.1; //sensitivity
+				float yawAngle = deltaX * 0.1f; //sensitivity
 				Mat4 yawRotation = Mat4().RotateZ(yawAngle);
 				camera.outcoming = camera.outcoming.transform(yawRotation).normalize();
 				//Pitch rotation
-				double pitchAngle = deltaY * 0.1; //sensitivity
+				float pitchAngle = deltaY * 0.1f; //sensitivity
 				Mat4 pitchRotation = Mat4().RotateX(pitchAngle);
-				camera.outcoming = (camera.outcoming + Vec4(0.0, 1.0, 0.0, 1.0).transform(pitchRotation) - Vec4(0.0, 1.0, 0.0, 1.0)).normalize();
+				camera.outcoming = (camera.outcoming + Vec4(0.0f, 1.0f, 0.0f, 1.0f).transform(pitchRotation) - Vec4(0.0f, 1.0f, 0.0f, 1.0f)).normalize();
 			}
 		}
 
 		//move camera
 		float dealtaTime = timer.dt();
-		double cameraSpeed = 100.0 * dealtaTime;
+		float cameraSpeed = 30.0f * dealtaTime;
 		Vec4 tangent = camera.up.cross(camera.outcoming).normalize();
 		if (canvas.keyPressed('W'))
 		{
@@ -200,7 +200,7 @@ int main()
 
 		//cout << "Camera Position: (" << camera.position.v[0] << ", " << camera.position.v[1] << ", " << camera.position.v[2] << ")     ";
 		//cout << "Camera Outcoming: (" << camera.outcoming.v[0] << ", " << camera.outcoming.v[1] << ", " << camera.outcoming.v[2] << ")     ";
-		cout << "FPS: " << 1.0 / dealtaTime << "\r";
+		cout << "FPS: " << 1.0f / dealtaTime << "\r";
 
 		buffer.clear();
 		//transform triangles to screen space
