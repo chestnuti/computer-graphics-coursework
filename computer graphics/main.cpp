@@ -28,29 +28,6 @@
 }*/
 
 
-class GEMMesh
-{
-public:
-	GEMLoader::GEMMaterial material;
-	std::vector<GEMLoader::GEMStaticVertex> verticesStatic;
-	std::vector<GEMLoader::GEMAnimatedVertex> verticesAnimated;
-	std::vector<unsigned int> indices;
-
-
-};
-
-
-class GEMStaticVertex
-{
-public:
-	GEMLoader::GEMVec3 position;
-	GEMLoader::GEMVec3 normal;
-	GEMLoader::GEMVec3 tangent;
-	float u;
-	float v;
-};
-
-
 class Colour
 {
 	public:
@@ -75,33 +52,11 @@ class Colour
 
 
 
+
+
 int main()
 {
-	//GEM model loading test
-	std::vector<GEMLoader::GEMMesh> gemmeshes;
-	GEMLoader::GEMModelLoader loader;
-	loader.load("F:/Documents/CodeProjects/computer-graphics-coursework/computer graphics/Resources Lecture 2/bunny.gem", gemmeshes);
-	std::vector<Vec3> vertexList;
-	for (int i = 0; i < gemmeshes.size(); i++) {
-		for (int j = 0; j < gemmeshes[i].indices.size(); j++) {
-			GEMLoader::GEMVec3 vec;
-			int index = gemmeshes[i].indices[j];
-			vec = gemmeshes[i].verticesStatic[index].position;
-			vertexList.push_back(Vec3(vec.x, vec.y, vec.z));
-		}
-	}
-
-	
-
-
-	return 0;
-}
-
-
-
-/*int main()
-{
-	//initialize a triangle
+	/*//initialize a triangle
 	Triangle tri(
 		Vec4(200.0, 200.0, 0.0, 1.0),
 		Vec4(150.0, 300.0, 0.0, 1.0),
@@ -140,7 +95,39 @@ int main()
 	Triangles[0] = &tri;
 	Triangles[1] = &axisX;
 	Triangles[2] = &axisY;
-	Triangles[3] = &axisZ;
+	Triangles[3] = &axisZ;*/
+
+	//GEM model loading test
+	std::vector<GEMLoader::GEMMesh> gemmeshes;
+	GEMLoader::GEMModelLoader loader;
+	loader.load("./Resources Lecture 2/bunny.gem", gemmeshes);
+	std::vector<Vec3> vertexList;
+	std::vector<Colour> colorList;
+	for (int i = 0; i < gemmeshes.size(); i++) {
+		for (int j = 0; j < gemmeshes[i].indices.size(); j++) {
+			GEMLoader::GEMVec3 vec;
+			int index = gemmeshes[i].indices[j];
+			vec = gemmeshes[i].verticesStatic[index].position;
+			vertexList.push_back(Vec3(vec.x, vec.y, vec.z));
+			vec = gemmeshes[i].verticesStatic[index].normal;
+			colorList.push_back(Colour(fabs(vec.x), fabs(vec.y), fabs(vec.z)));
+		}
+	}
+
+	int triangleCount = vertexList.size() / 3;
+	Triangle* Triangles = new Triangle[triangleCount];
+	for (int i = 0; i < vertexList.size() / 3; i++) {
+		Triangles[i] = Triangle(
+			Vec4(vertexList[i * 3 + 0].v[0], vertexList[i * 3 + 0].v[1], vertexList[i * 3 + 0].v[2], 1.0),
+			Vec4(vertexList[i * 3 + 1].v[0], vertexList[i * 3 + 1].v[1], vertexList[i * 3 + 1].v[2], 1.0),
+			Vec4(vertexList[i * 3 + 2].v[0], vertexList[i * 3 + 2].v[1], vertexList[i * 3 + 2].v[2], 1.0),
+			Vec3(colorList[i * 3 + 0].r * 255.0f, colorList[i * 3 + 0].g * 255.0f, colorList[i * 3 + 0].b * 255.0f),
+			Vec3(colorList[i * 3 + 1].r * 255.0f, colorList[i * 3 + 1].g * 255.0f, colorList[i * 3 + 1].b * 255.0f),
+			Vec3(colorList[i * 3 + 2].r * 255.0f, colorList[i * 3 + 2].g * 255.0f, colorList[i * 3 + 2].b * 255.0f)
+		);
+	}
+
+
 	Camera camera;
 	Buffer buffer(ScreenWidth, ScreenHeight);
 
@@ -184,7 +171,7 @@ int main()
 
 		//move camera
 		float dealtaTime = timer.dt();
-		double cameraSpeed = 500.0 * dealtaTime;
+		double cameraSpeed = 100.0 * dealtaTime;
 		Vec4 tangent = camera.up.cross(camera.outcoming).normalize();
 		if (canvas.keyPressed('W'))
 		{
@@ -211,15 +198,15 @@ int main()
 			camera.position -= camera.up * cameraSpeed;
 		}
 
-		cout << "Camera Position: (" << camera.position.v[0] << ", " << camera.position.v[1] << ", " << camera.position.v[2] << ")     ";
-		cout << "Camera Outcoming: (" << camera.outcoming.v[0] << ", " << camera.outcoming.v[1] << ", " << camera.outcoming.v[2] << ")     ";
+		//cout << "Camera Position: (" << camera.position.v[0] << ", " << camera.position.v[1] << ", " << camera.position.v[2] << ")     ";
+		//cout << "Camera Outcoming: (" << camera.outcoming.v[0] << ", " << camera.outcoming.v[1] << ", " << camera.outcoming.v[2] << ")     ";
 		cout << "FPS: " << 1.0 / dealtaTime << "\r";
 
 		buffer.clear();
 		//transform triangles to screen space
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < triangleCount; i++)
 		{
-			buffer.drawIntoBuffer(*Triangles[i], camera);
+			buffer.drawIntoBuffer(Triangles[i], camera);
 		}
 
 		//check points inside the triangle and draw them
@@ -238,4 +225,4 @@ int main()
 
 
 	return 0;
-}*/
+}

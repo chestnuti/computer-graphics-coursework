@@ -15,19 +15,36 @@ public:
 	Vec3 color0;
 	Vec3 color1;
 	Vec3 color2;
+	Vec4 normal;
+	Vec4 tangent;
 
 	Triangle() : v0(), v1(), v2() {
+		Vec4 v0v1 = v1 - v0;
+		Vec4 v0v2 = v2 - v0;
+		normal = v0v1.cross(v0v2).normalize();
+		tangent = normal.cross(v0v1).normalize();
 		color0 = Vec3(255, 255, 255);
 		color1 = Vec3(255, 255, 255);
 		color2 = Vec3(255, 255, 255);
 	}
 	Triangle(const Vec4& pV0, const Vec4 pV1, const Vec4& pV2) : v0(pV0), v1(pV1), v2(pV2) {
+		Vec4 v0v1 = v1 - v0;
+		Vec4 v0v2 = v2 - v0;
+		normal = v0v1.cross(v0v2).normalize();
+		tangent = normal.cross(v0v1).normalize();
 		color0 = Vec3(255, 255, 255);
 		color1 = Vec3(255, 255, 255);
 		color2 = Vec3(255, 255, 255);
 	}
 	Triangle(const Vec4& pV0, const Vec4 pV1, const Vec4& pV2, const Vec3& pColor0, const Vec3& pColor1, const Vec3& pColor2)
 		: v0(pV0), v1(pV1), v2(pV2), color0(pColor0), color1(pColor1), color2(pColor2) {
+		Vec4 v0v1 = v1 - v0;
+		Vec4 v0v2 = v2 - v0;
+		normal = v0v1.cross(v0v2).normalize();
+		tangent = normal.cross(v0v1).normalize();
+	}
+	Triangle(const Vec4& pV0, const Vec4 pV1, const Vec4& pV2, const Vec3& pColor0, const Vec3& pColor1, const Vec3& pColor2, const Vec4& pNormal, const Vec4& pTangent)
+		: v0(pV0), v1(pV1), v2(pV2), color0(pColor0), color1(pColor1), color2(pColor2), normal(pNormal), tangent(pTangent) {
 	}
 
 	Vec4 checkPointInside(const Vec4& point)
@@ -35,17 +52,17 @@ public:
 		//Calculate area of the triangle
 		Vec4 v0v1 = v1 - v0;
 		Vec4 v0v2 = v2 - v0;
-		//v0v1.v[2] = 0.0;
-		//v0v2.v[2] = 0.0;
+		v0v1.v[2] = 0.0;
+		v0v2.v[2] = 0.0;
 		Vec4 n = v0v1.cross(v0v2);
 		double area = sqrtf(n.v[0] * n.v[0] + n.v[1] * n.v[1] + n.v[2] * n.v[2]) / 2.0;
 		//Calculate area of sub-triangles
 		Vec4 v0p = point - v0;
 		Vec4 v1p = point - v1;
 		Vec4 v2p = point - v2;
-		//v0p.v[2] = 0.0;
-		//v1p.v[2] = 0.0;
-		//v2p.v[2] = 0.0;
+		v0p.v[2] = 0.0;
+		v1p.v[2] = 0.0;
+		v2p.v[2] = 0.0;
 		Vec4 n0 = v0p.cross(v1p);
 		Vec4 n1 = v0p.cross(v2p);
 		Vec4 n2 = v1p.cross(v2p);
@@ -57,13 +74,7 @@ public:
 		double alpha = area1 / area;
 		double beta = area2 / area;
 		double gamma = area0 / area;
-		//Vec3 color = color0 * alpha + color1 * beta + color2 * gamma;
-		//double depth = (v0.v[3] * gamma) + (v1.v[3] * alpha) + (v2.v[3] * beta);
-		/*//debug: z depth as color
-		Vec3 color0 = Vec3(v0.v[3], v0.v[3], v0.v[3]) * gamma;
-		Vec3 color1 = Vec3(v1.v[3], v1.v[3], v1.v[3]) * alpha;
-		Vec3 color2 = Vec3(v2.v[3], v2.v[3], v2.v[3]) * beta;
-		Vec3 color = color0 + color1 + color2;*/
+
 		if (fabs(area - areaSum) <= 0.1)
 			return Vec4(alpha, beta, gamma, 1.0); // inside
 		else

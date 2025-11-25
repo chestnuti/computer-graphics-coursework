@@ -12,7 +12,7 @@ public:
 	double clipNear;
 	double clipFar;
 
-	Camera() : position(0.0, 0.0, 50.0, 1.0), outcoming(0.0, 1.0, -1.0, 1.0), up(0.0, 0.0, 1.0, 1.0), fov(90.0), clipNear(0.01), clipFar(1000.0) {
+	Camera() : position(0.0, 0.0, 50.0, 1.0), outcoming(0.0, 1.0, -1.0, 1.0), up(0.0, 0.0, 1.0, 1.0), fov(90.0), clipNear(0.1), clipFar(1000.0) {
 		Vec4 tangent = up.cross(outcoming).normalize();
 	}
 
@@ -61,12 +61,12 @@ public:
 		projected.v[1] /= projected.v[3];
 		projected.v[2] /= projected.v[3];
 
-		Vec4 distanceVec = projection - position;
+		/*Vec4 distanceVec = projection - position;
 		double distance = distanceVec.getLength();
 		if (outcoming.normalize().Dot(distanceVec.normalize()) <= 0 || distance < clipNear || distance > clipFar)
 			projected.v[3] = -1.0; //not visible
 		else
-			projected.v[3] = remap(distance, clipNear, clipFar, 0.0, 255.0); //visible with depth info
+			projected.v[3] = remap(distance, clipNear, clipFar, 0.0, 255.0); //visible with depth info*/
 
 		return projected;
 	}
