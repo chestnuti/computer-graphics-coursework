@@ -1,10 +1,14 @@
 #include "./includes/Window.h"
 #include "./includes/Core.h"
 #include "./includes/Mesh.h"
+#include "./includes/Buffer.h"
+#include "./includes/GamesEngineeringBase.h"
+
+#include "./includes/GEMLoader.h"
 
 
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+/*int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	Window win;
 	win.create(1024, 1024, "My Window");
 	Core core;
@@ -21,8 +25,77 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 	core.flushGraphicsQueue();
 
-}
+}*/
 
+
+class GEMMesh
+{
+public:
+	GEMLoader::GEMMaterial material;
+	std::vector<GEMLoader::GEMStaticVertex> verticesStatic;
+	std::vector<GEMLoader::GEMAnimatedVertex> verticesAnimated;
+	std::vector<unsigned int> indices;
+
+
+};
+
+
+class GEMStaticVertex
+{
+public:
+	GEMLoader::GEMVec3 position;
+	GEMLoader::GEMVec3 normal;
+	GEMLoader::GEMVec3 tangent;
+	float u;
+	float v;
+};
+
+
+class Colour
+{
+	public:
+	float r;
+	float g;
+	float b;
+	Colour() : r(0), g(0), b(0) {}
+	Colour(float red, float green, float blue) : r(red), g(green), b(blue) {}
+	Colour operator*(const Colour& col) const
+	{
+		return Colour(r * col.r, g * col.g, b * col.b);
+	}
+	Colour operator*(const float val) const
+	{
+		return Colour(r * val, g * val, b * val);
+	}
+	Colour operator/(const float val) const
+	{
+		return Colour(r / val, g / val, b / val);
+	}
+};
+
+
+
+int main()
+{
+	//GEM model loading test
+	std::vector<GEMLoader::GEMMesh> gemmeshes;
+	GEMLoader::GEMModelLoader loader;
+	loader.load("F:/Documents/CodeProjects/computer-graphics-coursework/computer graphics/Resources Lecture 2/bunny.gem", gemmeshes);
+	std::vector<Vec3> vertexList;
+	for (int i = 0; i < gemmeshes.size(); i++) {
+		for (int j = 0; j < gemmeshes[i].indices.size(); j++) {
+			GEMLoader::GEMVec3 vec;
+			int index = gemmeshes[i].indices[j];
+			vec = gemmeshes[i].verticesStatic[index].position;
+			vertexList.push_back(Vec3(vec.x, vec.y, vec.z));
+		}
+	}
+
+	
+
+
+	return 0;
+}
 
 
 
@@ -68,8 +141,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	Triangles[1] = &axisX;
 	Triangles[2] = &axisY;
 	Triangles[3] = &axisZ;
-	Triangle* tri_transformed[4];
 	Camera camera;
+	Buffer buffer(ScreenWidth, ScreenHeight);
 
 	int mouseX_prev = 0;
 	int mouseY_prev = 0;
@@ -78,6 +151,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	GamesEngineeringBase::Window canvas;
 	canvas.create(ScreenWidth, ScreenHeight, "window");
 	GamesEngineeringBase::Timer timer;
+
 
 	//main loop
 	while (true) {
@@ -88,7 +162,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		int mouseX = canvas.getMouseX();
 		int mouseY = canvas.getMouseY();
-
 		int deltaX = mouseX - mouseX_prev;
 		int deltaY = mouseY - mouseY_prev;
 		mouseX_prev = mouseX;
@@ -142,16 +215,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cout << "Camera Outcoming: (" << camera.outcoming.v[0] << ", " << camera.outcoming.v[1] << ", " << camera.outcoming.v[2] << ")     ";
 		cout << "FPS: " << 1.0 / dealtaTime << "\r";
 
-		//transform triangle vertices to camera space
+		buffer.clear();
+		//transform triangles to screen space
 		for (int i = 0; i < 4; i++)
 		{
-			tri_transformed[i] = new Triangle();
-			tri_transformed[i]->v0 = camera.getViewProjectionVector(Triangles[i]->v0);
-			tri_transformed[i]->v1 = camera.getViewProjectionVector(Triangles[i]->v1);
-			tri_transformed[i]->v2 = camera.getViewProjectionVector(Triangles[i]->v2);
-			tri_transformed[i]->color0 = Triangles[i]->color0;
-			tri_transformed[i]->color1 = Triangles[i]->color1;
-			tri_transformed[i]->color2 = Triangles[i]->color2;
+			buffer.drawIntoBuffer(*Triangles[i], camera);
 		}
 
 		//check points inside the triangle and draw them
@@ -159,16 +227,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		{
 			for (int x = 0; x < ScreenWidth; x++)
 			{
-				Vec4 point((double)x, (double)y, 0.0, 1.0);
-				for (int i = 0; i < 4; i++)
-				{
-					if(tri_transformed[i]->v0.v[3] == 0.0 || tri_transformed[i]->v1.v[3] == 0.0 || tri_transformed[i]->v2.v[3] == 0.0)
-						continue; //triangle not visible
-					Vec4 color = tri_transformed[i]->checkPointInside(point);
-					if (color.v[3]){
-						canvas.draw(x, y, color.v[0], color.v[1], color.v[2]); //draw point with interpolated color
-					}
-				}
+				//canvas.draw(x, y, static_cast<int>(buffer.getDepthBuffer()[y * ScreenWidth + x]), static_cast<int>(buffer.getDepthBuffer()[y * ScreenWidth + x]), buffer.getDepthBuffer()[y * ScreenWidth + x]);
+				canvas.draw(x, y, buffer.getColorBuffer()[y * ScreenWidth + x].v[0], buffer.getColorBuffer()[y * ScreenWidth + x].v[1], buffer.getColorBuffer()[y * ScreenWidth + x].v[2]);
 			}
 		}
 

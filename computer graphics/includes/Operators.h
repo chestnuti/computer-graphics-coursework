@@ -15,3 +15,14 @@ double remap(double val, double inMin, double inMax, double outMin, double outMa
 {
 	return outMin + (outMax - outMin) * ((val - inMin) / (inMax - inMin));
 }
+
+template<typename t>
+t perspectiveCorrectInterpolateAttribute(t a0, t a1, t a2, double v0_w, double v1_w, double v2_w, double alpha, double beta, double gamma)
+{
+	double frag_w = ((alpha * v0_w) + (beta * v1_w) + (gamma * v2_w));
+	t attrib[3];
+	attrib[0] = a0 * alpha * v0_w;
+	attrib[1] = a1 * beta * v1_w;
+	attrib[2] = a2 * gamma * v2_w;
+	return ((attrib[0] + attrib[1] + attrib[2]) / frag_w);
+}

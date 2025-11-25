@@ -29,6 +29,10 @@ public:
 	{
 		return Vec3(v[0] * val, v[1] * val, v[2] * val);
 	}
+	Vec3 operator/(const double val) const
+	{
+		return Vec3(v[0] / val, v[1] / val, v[2] / val);
+	}
 	Vec3 operator-() const
 	{
 		return Vec3(-v[0], -v[1], -v[2]);
@@ -112,6 +116,10 @@ public:
 	Vec4 operator*(const double val) const
 	{
 		return Vec4(v[0] * val, v[1] * val, v[2] * val, v[3] * val);
+	}
+	Vec4 operator/(const double val) const
+	{
+		return Vec4(v[0] / val, v[1] / val, v[2] / val, v[3] / val);
 	}
 	Vec4 operator-() const
 	{

@@ -36,6 +36,12 @@
     <ClInclude Include="includes\Operators.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="includes\Buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\GEMLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
