@@ -2,6 +2,7 @@
 
 #include "Vector.h"
 #include "Operators.h"
+#include "Core.h"
 
 
 
@@ -77,6 +78,107 @@ public:
 			return Vec4(alpha, beta, gamma, 1.0f); // inside
 		else
 			return Vec4(alpha, beta, gamma, 0.0f); // outside
+	}
+
+};
+
+
+
+class Colour
+{
+public:
+	float r;
+	float g;
+	float b;
+	Colour() : r(0), g(0), b(0) {}
+	Colour(float red, float green, float blue) : r(red), g(green), b(blue) {}
+	Colour operator*(const Colour& col) const
+	{
+		return Colour(r * col.r, g * col.g, b * col.b);
+	}
+	Colour operator*(const float val) const
+	{
+		return Colour(r * val, g * val, b * val);
+	}
+	Colour operator/(const float val) const
+	{
+		return Colour(r / val, g / val, b / val);
+	}
+};
+
+struct PRIM_VERTEX
+{
+	Vec3 position;
+	Colour colour;
+};
+
+
+class Mesh {
+public:
+	// Vertex buffer
+	ID3D12Resource* vertexBuffer;
+	// Vertex buffer view
+	D3D12_VERTEX_BUFFER_VIEW vbView;
+
+
+	Mesh() : vertexBuffer(nullptr) {}
+
+	void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices)
+	{
+		// Create an upload heap to upload the vertex buffer data
+		D3D12_HEAP_PROPERTIES heapprops = {};
+		heapprops.Type = D3D12_HEAP_TYPE_DEFAULT;
+		heapprops.CreationNodeMask = 1;
+		heapprops.VisibleNodeMask = 1;
+		// Create the vertex buffer on heap
+		D3D12_RESOURCE_DESC vbDesc = {};
+		vbDesc.Width = numVertices * vertexSizeInBytes;
+		vbDesc.Height = 1;
+		vbDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		vbDesc.DepthOrArraySize = 1;
+		vbDesc.MipLevels = 1;
+		vbDesc.SampleDesc.Count = 1;
+		vbDesc.SampleDesc.Quality = 0;
+		vbDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		// Allocate upload heap
+		core->device->CreateCommittedResource(&heapprops, D3D12_HEAP_FLAG_NONE, &vbDesc,
+			D3D12_RESOURCE_STATE_COMMON, NULL, IID_PPV_ARGS(&vertexBuffer));
+		// Copy vertex data to the vertex buffer
+		core->uploadResource(vertexBuffer, vertices, numVertices * vertexSizeInBytes,
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		// Create vertex buffer view
+		vbView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
+		vbView.StrideInBytes = vertexSizeInBytes;
+		vbView.SizeInBytes = numVertices * vertexSizeInBytes;
+	}
+
+	void draw(Core* core)
+	{
+		core->getCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		core->getCommandList()->IASetVertexBuffers(0, 1, &vbView);
+		core->getCommandList()->DrawInstanced(3, 1, 0, 0);
+	}
+};
+
+
+
+class ScreenSpaceTriangle {
+public:
+	// Define triangle vertices
+	PRIM_VERTEX vertices[3];
+	Mesh mesh;
+
+	ScreenSpaceTriangle() {
+		vertices[0].position = Vec3(0, 1.0f, 0);
+		vertices[0].colour = Colour(0, 1.0f, 0);
+		vertices[1].position = Vec3(-1.0f, -1.0f, 0);
+		vertices[1].colour = Colour(1.0f, 0, 0);
+		vertices[2].position = Vec3(1.0f, -1.0f, 0);
+		vertices[2].colour = Colour(0, 0, 1.0f);
+	}
+	
+	void init(Core& core) {
+		mesh.init(&core, vertices, sizeof(PRIM_VERTEX), 3);
 	}
 
 };

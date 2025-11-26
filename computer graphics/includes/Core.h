@@ -75,6 +75,8 @@ public:
 	// Viewport and scissor rect
 	D3D12_VIEWPORT viewport;
 	D3D12_RECT scissorRect;
+	// Root signature
+	ID3D12RootSignature* rootSignature;
 
 
 	void init(HWND hwnd, int _width, int _height) {
@@ -204,6 +206,14 @@ public:
 		scissorRect.top = 0;
 		scissorRect.right = _width;
 		scissorRect.bottom = _height;
+		// allow drawing
+		D3D12_ROOT_SIGNATURE_DESC desc = {};
+		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		ID3DBlob* serialized;
+		ID3DBlob* error;
+		D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized, &error);
+		device->CreateRootSignature(0, serialized->GetBufferPointer(), serialized->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+		serialized->Release();
 	}
 
 	// Reset command list for current frame
@@ -271,5 +281,60 @@ public:
 		swapchain->Present(1, 0);
 	}
 
+	// Upload resource data
+	void uploadResource(ID3D12Resource* dstResource, const void* data, unsigned int size,
+		D3D12_RESOURCE_STATES targetState, D3D12_PLACED_SUBRESOURCE_FOOTPRINT* texFootprint = NULL)
+	{
+		// Allocate upload buffer
+		ID3D12Resource* uploadBuffer;
+		D3D12_HEAP_PROPERTIES heapProps = {};
+		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+		D3D12_RESOURCE_DESC bufferDesc = {};
+		bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		bufferDesc.Width = size;
+		bufferDesc.Height = 1;
+		bufferDesc.DepthOrArraySize = 1;
+		bufferDesc.MipLevels = 1;
+		bufferDesc.SampleDesc.Count = 1;
+		bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&uploadBuffer));
+		// Copy data to upload buffer
+		void* mappeddata = NULL;
+		uploadBuffer->Map(0, NULL, &mappeddata);
+		memcpy(mappeddata, data, size);
+		uploadBuffer->Unmap(0, NULL);
+		// Issue copy command
+		resetCommandList();	// Reset command list
+		if (texFootprint != NULL)
+		{
+			D3D12_TEXTURE_COPY_LOCATION src = {};
+			src.pResource = uploadBuffer;
+			src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+			src.PlacedFootprint = *texFootprint;
+			D3D12_TEXTURE_COPY_LOCATION dst = {};
+			dst.pResource = dstResource;
+			dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			dst.SubresourceIndex = 0;
+			getCommandList()->CopyTextureRegion(&dst, 0, 0, 0, &src, NULL);
+		}
+		else
+		{
+			getCommandList()->CopyBufferRegion(dstResource, 0, uploadBuffer, 0, size);
+		}
+		// Transition buffer to final stage after copy
+		Barrier::add(dstResource, D3D12_RESOURCE_STATE_COPY_DEST, targetState, getCommandList());
+		runCommandList();	// Cloas and execute copy command
+		flushGraphicsQueue();	// Wait for copy to finish
+		uploadBuffer->Release();	// Release upload buffer
+
+	}
+
+	void beginRenderPass()
+	{
+		getCommandList()->RSSetViewports(1, &viewport);
+		getCommandList()->RSSetScissorRects(1, &scissorRect);
+		getCommandList()->SetGraphicsRootSignature(rootSignature);
+	}
 
 };

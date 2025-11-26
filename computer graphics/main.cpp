@@ -2,17 +2,35 @@
 #include "./includes/Core.h"
 #include "./includes/Mesh.h"
 #include "./includes/Buffer.h"
+#include "./includes/Objects.h"
+#include "./includes/Layout.h"
 #include "./includes/GamesEngineeringBase.h"
 
 #include "./includes/GEMLoader.h"
 
 
 
-/*int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+	// Create window and initialize core
 	Window win;
 	win.create(1024, 1024, "My Window");
 	Core core;
 	core.init(win.hwnd, win.width, win.height);
+
+	ScreenSpaceTriangle sst;
+	sst.init(core);
+
+	// Compile shaders
+	Objects obj;
+	obj.init("./Resources Lecture 2/SimpleVertexShader.hlsl", "./Resources Lecture 2/SimplePixelShader.hlsl");
+	// Define input layout
+	Layout prim;
+	// Create PSO manager
+	PSOManager psos;
+	psos.createPSO(&core, "Triangle", obj.vertexShader, obj.pixelShader, prim.inputLayoutDesc);
+
+
 	while (true) {
 		core.resetCommandList();
 		core.beginFrame();
@@ -21,42 +39,23 @@
 		{
 			break;
 		}
+		// draw triangle
+		core.beginRenderPass();
+		psos.bind(&core, "Triangle");
+		sst.mesh.draw(&core);
+
 		core.finishFrame();
 	}
 	core.flushGraphicsQueue();
 
-}*/
-
-
-class Colour
-{
-	public:
-	float r;
-	float g;
-	float b;
-	Colour() : r(0), g(0), b(0) {}
-	Colour(float red, float green, float blue) : r(red), g(green), b(blue) {}
-	Colour operator*(const Colour& col) const
-	{
-		return Colour(r * col.r, g * col.g, b * col.b);
-	}
-	Colour operator*(const float val) const
-	{
-		return Colour(r * val, g * val, b * val);
-	}
-	Colour operator/(const float val) const
-	{
-		return Colour(r / val, g / val, b / val);
-	}
-};
-
-
+}
 
 
 
 int main()
 {
-	/*//initialize a triangle
+	/*
+	//initialize a triangle
 	Triangle tri(
 		Vec4(200.0f, 200.0f, 0.0f, 1.0f),
 		Vec4(150.0f, 300.0f, 0.0f, 1.0f),
