@@ -160,12 +160,18 @@ public:
 };
 
 
+struct alignas(16) ConstantBuffer1
+{
+	float time;
+};
 
 class ConstantBuffer {
 public:
 	ID3D12Resource* constantBuffer;
 	unsigned char* buffer;
 	unsigned int cbSizeInBytes;
+
+	ConstantBuffer1 constBufferCPU;
 
 	void init(Core* core, unsigned int sizeInBytes, int frames)
 	{
@@ -187,7 +193,21 @@ public:
 		hr = core->device->CreateCommittedResource(&heapprops, D3D12_HEAP_FLAG_NONE, &cbDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ, NULL, __uuidof(ID3D12Resource), (void**)&constantBuffer);
 		hr = constantBuffer->Map(0, NULL, (void**)&buffer);
+		// make triangle pulse with time
+		constBufferCPU.time = 0;
 
+	}
+
+	// update via memcpy
+	void update(void* data, unsigned int sizeInBytes, int frame)
+	{
+		memcpy(buffer + (frame * cbSizeInBytes), data, sizeInBytes);
+	}
+
+	// get GPU virtual address
+	D3D12_GPU_VIRTUAL_ADDRESS getGPUAddress(int frame)
+	{
+		return (constantBuffer->GetGPUVirtualAddress() + (frame * cbSizeInBytes));
 	}
 
 

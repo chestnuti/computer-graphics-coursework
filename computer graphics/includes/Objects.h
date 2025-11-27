@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <sstream>
+#include "Buffer.h"
 
 
 class Objects {
@@ -16,18 +17,18 @@ public:
 		// Compile shaders
 		ID3DBlob* status;
 		std::string vertexShaderStr = readShaderFile(vertexShaderCode);
-		HRESULT hr = D3DCompile(vertexShaderStr.c_str(), strlen(vertexShaderStr.c_str()), NULL,
+		HRESULT hr1 = D3DCompile(vertexShaderStr.c_str(), strlen(vertexShaderStr.c_str()), NULL,
 			NULL, NULL, "VS", "vs_5_0", 0, 0, &vertexShader, &status);
 		//check hr
-		if (FAILED(hr))
+		if (FAILED(hr1))
 		{
 			(char*)status->GetBufferPointer();
 		}
 		std::string pixelShaderStr = readShaderFile(pixelShaderCode);
-		hr = D3DCompile(pixelShaderStr.c_str(), strlen(pixelShaderStr.c_str()), NULL,
+		HRESULT hr2 = D3DCompile(pixelShaderStr.c_str(), strlen(pixelShaderStr.c_str()), NULL,
 			NULL, NULL, "PS", "ps_5_0", 0, 0, &pixelShader, &status);
 		//check hr
-		if (FAILED(hr))
+		if (FAILED(hr2))
 		{
 			(char*)status->GetBufferPointer();
 		}
@@ -43,6 +44,7 @@ public:
 };
 
 
+// Pipeline State Object Manager
 class PSOManager {
 public:
 	std::unordered_map<std::string, ID3D12PipelineState*> psos;

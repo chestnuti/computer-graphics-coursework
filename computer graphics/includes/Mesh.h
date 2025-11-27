@@ -113,15 +113,18 @@ struct PRIM_VERTEX
 };
 
 
-class Mesh {
+class VertexBuffer {
 public:
 	// Vertex buffer
 	ID3D12Resource* vertexBuffer;
 	// Vertex buffer view
 	D3D12_VERTEX_BUFFER_VIEW vbView;
+	// Layout of the vertex buffer
+	D3D12_INPUT_ELEMENT_DESC inputLayout[2];
+	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
 
 
-	Mesh() : vertexBuffer(nullptr) {}
+	VertexBuffer() : vertexBuffer(nullptr), vbView() {}
 
 	void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices)
 	{
@@ -150,6 +153,13 @@ public:
 		vbView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 		vbView.StrideInBytes = vertexSizeInBytes;
 		vbView.SizeInBytes = numVertices * vertexSizeInBytes;
+		// Fill input layout description
+		inputLayout[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+		inputLayout[1] = { "COLOUR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+		inputLayoutDesc.NumElements = 2;
+		inputLayoutDesc.pInputElementDescs = inputLayout;
 	}
 
 	void draw(Core* core)
@@ -166,7 +176,7 @@ class ScreenSpaceTriangle {
 public:
 	// Define triangle vertices
 	PRIM_VERTEX vertices[3];
-	Mesh mesh;
+	VertexBuffer vb;
 
 	ScreenSpaceTriangle() {
 		vertices[0].position = Vec3(0, 1.0f, 0);
@@ -178,7 +188,7 @@ public:
 	}
 	
 	void init(Core& core) {
-		mesh.init(&core, vertices, sizeof(PRIM_VERTEX), 3);
+		vb.init(&core, vertices, sizeof(PRIM_VERTEX), 3);
 	}
 
 };

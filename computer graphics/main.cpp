@@ -17,32 +17,46 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	win.create(1024, 1024, "My Window");
 	Core core;
 	core.init(win.hwnd, win.width, win.height);
+	GamesEngineeringBase::Timer timer;
 
 	ScreenSpaceTriangle sst;
 	sst.init(core);
 
 	// Compile shaders
 	Objects obj;
-	obj.init("./Resources Lecture 2/SimpleVertexShader.hlsl", "./Resources Lecture 2/SimplePixelShader.hlsl");
-	// Define input layout
-	Layout prim;
+	obj.init("./hlsl/Shader1.hlsl", "./hlsl/Shader2.hlsl");
+
 	// Create PSO manager
 	PSOManager psos;
-	psos.createPSO(&core, "Triangle", obj.vertexShader, obj.pixelShader, prim.inputLayoutDesc);
+	psos.createPSO(&core, "Triangle", obj.vertexShader, obj.pixelShader, sst.vb.inputLayoutDesc);
 
+	ConstantBuffer constantBuffer;
+	constantBuffer.init(&core, sizeof(ConstantBuffer1), 1);
 
 	while (true) {
 		core.resetCommandList();
 		core.beginFrame();
+
 		win.processMessages();
 		if (win.keys[VK_ESCAPE] == 1)
 		{
 			break;
 		}
-		// draw triangle
+		/*// draw triangle
 		core.beginRenderPass();
 		psos.bind(&core, "Triangle");
-		sst.mesh.draw(&core);
+		sst.vb.draw(&core);*/
+		// update constant buffer
+		float dt = timer.dt();
+		constantBuffer.constBufferCPU.time += dt;
+		// draw triangle with time-based pulsing color
+		core.beginRenderPass();
+		constantBuffer.update(&constantBuffer.constBufferCPU, sizeof(ConstantBuffer1), core.frameIndex());
+		// Bind Constant Buffer View to Root Signature index
+		core.getCommandList()->SetGraphicsRootConstantBufferView(0, constantBuffer.getGPUAddress(core.frameIndex()));
+		core.getCommandList()->SetGraphicsRootConstantBufferView(1, constantBuffer.getGPUAddress(core.frameIndex()));
+		psos.bind(&core, "Triangle");
+		sst.vb.draw(&core);
 
 		core.finishFrame();
 	}
