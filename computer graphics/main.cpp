@@ -2,19 +2,30 @@
 #include "./includes/Core.h"
 #include "./includes/Mesh.h"
 #include "./includes/Buffer.h"
-#include "./includes/Objects.h"
-#include "./includes/Layout.h"
+#include "./includes/Shader.h"
 #include "./includes/GamesEngineeringBase.h"
 
 #include "./includes/GEMLoader.h"
 
 
+struct alignas(16) ConstantBuffer1
+{
+	float time;
+};
+
+struct alignas(16) ConstantBuffer2
+{
+	float time;
+	float padding[3];
+	Vec4 lights[4];
+};
 
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	// Create window and initialize core
 	Window win;
 	win.create(1024, 1024, "My Window");
+	// Initialize core
 	Core core;
 	core.init(win.hwnd, win.width, win.height);
 	GamesEngineeringBase::Timer timer;
@@ -23,15 +34,29 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	sst.init(core);
 
 	// Compile shaders
-	Objects obj;
-	obj.init("./hlsl/Shader1.hlsl", "./hlsl/Shader2.hlsl");
+	Shader shader;
+	shader.init("./hlsl/Shader1.hlsl", "./hlsl/Shader3.hlsl");
 
 	// Create PSO manager
 	PSOManager psos;
-	psos.createPSO(&core, "Triangle", obj.vertexShader, obj.pixelShader, sst.vb.inputLayoutDesc);
+	psos.createPSO(&core, "Triangle", shader.vertexShader, shader.pixelShader, sst.vb.inputLayoutDesc);
 
+	// make triangle pulse with time
+	ConstantBuffer2 constBufferCPU2;
+	constBufferCPU2.time = 0;
+
+	// Create constant buffer
 	ConstantBuffer constantBuffer;
-	constantBuffer.init(&core, sizeof(ConstantBuffer1), 1);
+	constantBuffer.init(&core, sizeof(ConstantBufferVariable));	//!Question: What the size should be here?
+
+	// Define constant buffer variables and their offsets/sizes
+	ConstantBufferVariable cbVarTime;
+	cbVarTime.offset = 0;
+	cbVarTime.size = sizeof(constBufferCPU2);
+	constantBuffer.constantBufferData.insert({ "time", cbVarTime });
+
+	int width = win.width;
+	int height = win.height;
 
 	while (true) {
 		core.resetCommandList();
@@ -42,19 +67,22 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		{
 			break;
 		}
-		/*// draw triangle
-		core.beginRenderPass();
-		psos.bind(&core, "Triangle");
-		sst.vb.draw(&core);*/
-		// update constant buffer
+		// make lights orbit around center of screen
 		float dt = timer.dt();
-		constantBuffer.constBufferCPU.time += dt;
+		constBufferCPU2.time += dt;
+		for (int i = 0; i < 4; i++) {
+			float angle = constBufferCPU2.time + (i * M_PI / 2.0f);
+			constBufferCPU2.lights[i] = Vec4(width / 2.0f + (cosf(angle) * (width * 0.3f)),
+				height / 2.0f + (sinf(angle) * (height * 0.3f)),
+				0, 0);
+		};
 		// draw triangle with time-based pulsing color
 		core.beginRenderPass();
-		constantBuffer.update(&constantBuffer.constBufferCPU, sizeof(ConstantBuffer1), core.frameIndex());
+		//constantBuffer.update(&constBufferCPU2, sizeof(ConstantBuffer2), core.frameIndex());
+		constantBuffer.update("time", &constBufferCPU2);
 		// Bind Constant Buffer View to Root Signature index
-		core.getCommandList()->SetGraphicsRootConstantBufferView(0, constantBuffer.getGPUAddress(core.frameIndex()));
-		core.getCommandList()->SetGraphicsRootConstantBufferView(1, constantBuffer.getGPUAddress(core.frameIndex()));
+		core.getCommandList()->SetGraphicsRootConstantBufferView(0, constantBuffer.getGPUAddress());
+		core.getCommandList()->SetGraphicsRootConstantBufferView(1, constantBuffer.getGPUAddress());
 		psos.bind(&core, "Triangle");
 		sst.vb.draw(&core);
 

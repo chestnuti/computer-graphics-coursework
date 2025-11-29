@@ -42,10 +42,7 @@
     <ClInclude Include="includes\GEMLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="includes\Layout.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="includes\Objects.h">
+    <ClInclude Include="includes\Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,10 +59,5 @@
     <ClCompile Include="Core.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Shader1.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

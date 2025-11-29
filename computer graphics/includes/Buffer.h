@@ -1,6 +1,7 @@
 #pragma once
 #include "Mesh.h"
 #include "Operators.h"
+#include <map>
 
 #define ScreenWidth 480
 #define ScreenHeight 270
@@ -160,29 +161,38 @@ public:
 };
 
 
-struct alignas(16) ConstantBuffer1
+struct ConstantBufferVariable
 {
-	float time;
+	unsigned int offset;
+	unsigned int size;
 };
 
 class ConstantBuffer {
 public:
+	std::string name;
+	std::map<std::string, ConstantBufferVariable> constantBufferData;
+
 	ID3D12Resource* constantBuffer;
 	unsigned char* buffer;
 	unsigned int cbSizeInBytes;
+	unsigned int maxDrawCalls;
+	unsigned int offsetIndex;
+	unsigned int numInstances;
 
-	ConstantBuffer1 constBufferCPU;
-
-	void init(Core* core, unsigned int sizeInBytes, int frames)
+	void init(Core* core, unsigned int sizeInBytes, unsigned int _maxDrawCalls = 1024)
 	{
 		cbSizeInBytes = (sizeInBytes + 255) & ~255;
+		maxDrawCalls = _maxDrawCalls;
+		unsigned int cbSizeInBytesAligned = cbSizeInBytes * maxDrawCalls;
+		numInstances = _maxDrawCalls;
+		offsetIndex = 0;
 		HRESULT hr;
 		D3D12_HEAP_PROPERTIES heapprops = {};
 		heapprops.Type = D3D12_HEAP_TYPE_UPLOAD;
 		heapprops.CreationNodeMask = 1;
 		heapprops.VisibleNodeMask = 1;
 		D3D12_RESOURCE_DESC cbDesc = {};
-		cbDesc.Width = cbSizeInBytes * frames;
+		cbDesc.Width = cbSizeInBytesAligned;
 		cbDesc.Height = 1;
 		cbDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 		cbDesc.DepthOrArraySize = 1;
@@ -190,25 +200,32 @@ public:
 		cbDesc.SampleDesc.Count = 1;
 		cbDesc.SampleDesc.Quality = 0;
 		cbDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		hr = core->device->CreateCommittedResource(&heapprops, D3D12_HEAP_FLAG_NONE, &cbDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ, NULL, __uuidof(ID3D12Resource), (void**)&constantBuffer);
-		hr = constantBuffer->Map(0, NULL, (void**)&buffer);
-		// make triangle pulse with time
-		constBufferCPU.time = 0;
-
+		core->device->CreateCommittedResource(&heapprops, D3D12_HEAP_FLAG_NONE, &cbDesc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL,
+			IID_PPV_ARGS(&constantBuffer));
+		constantBuffer->Map(0, NULL, (void**)&buffer);	//!Question: why index 0? And what is the &buffer as it is never initialized?
 	}
 
 	// update via memcpy
-	void update(void* data, unsigned int sizeInBytes, int frame)
+	void update(std::string name, void* data)
 	{
-		memcpy(buffer + (frame * cbSizeInBytes), data, sizeInBytes);
+		ConstantBufferVariable cbVariable = constantBufferData[name];
+		unsigned int offset = offsetIndex * cbSizeInBytes;
+		memcpy(&buffer[offset + cbVariable.offset], data, cbVariable.size);
 	}
 
 	// get GPU virtual address
-	D3D12_GPU_VIRTUAL_ADDRESS getGPUAddress(int frame)
+	D3D12_GPU_VIRTUAL_ADDRESS getGPUAddress() const
 	{
-		return (constantBuffer->GetGPUVirtualAddress() + (frame * cbSizeInBytes));
+		return (constantBuffer->GetGPUVirtualAddress() + (offsetIndex * cbSizeInBytes));
 	}
 
-
+	// move to next offset
+	void next()
+	{
+		offsetIndex++;
+		if (offsetIndex >= maxDrawCalls)
+		{
+			offsetIndex = 0;
+		}
+	}
 };

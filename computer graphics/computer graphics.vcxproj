@@ -130,10 +130,9 @@
     <ClInclude Include="includes\Core.h" />
     <ClInclude Include="includes\GamesEngineeringBase.h" />
     <ClInclude Include="includes\GEMLoader.h" />
-    <ClInclude Include="includes\Layout.h" />
     <ClInclude Include="includes\Matrix.h" />
     <ClInclude Include="includes\Mesh.h" />
-    <ClInclude Include="includes\Objects.h" />
+    <ClInclude Include="includes\Shader.h" />
     <ClInclude Include="includes\Operators.h" />
     <ClInclude Include="includes\Vector.h" />
     <ClInclude Include="includes\Window.h" />

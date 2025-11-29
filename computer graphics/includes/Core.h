@@ -60,7 +60,7 @@ public:
 	ID3D12CommandQueue* copyQueue;
 	ID3D12CommandQueue* computeQueue;
 	IDXGISwapChain3* swapchain;
-	// Double buffering
+	// Command allocators and command lists
 	ID3D12CommandAllocator* graphicsCommandAllocator[2];
 	ID3D12GraphicsCommandList4* graphicsCommandList[2];
 	// Backbuffer resources
@@ -206,6 +206,7 @@ public:
 		scissorRect.top = 0;
 		scissorRect.right = _width;
 		scissorRect.bottom = _height;
+
 		// Upload Root Signature
 		std::vector<D3D12_ROOT_PARAMETER> parameters;
 		D3D12_ROOT_PARAMETER rootParameterCBVS;
