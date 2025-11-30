@@ -213,6 +213,13 @@ public:
 		memcpy(&buffer[offset + cbVariable.offset], data, cbVariable.size);
 	}
 
+	template<typename T>
+	void updateAll(const T& data)
+	{
+		unsigned int offset = offsetIndex * cbSizeInBytes;
+		memcpy(&buffer[offset], &data, sizeof(T));
+	}
+
 	// get GPU virtual address
 	D3D12_GPU_VIRTUAL_ADDRESS getGPUAddress() const
 	{

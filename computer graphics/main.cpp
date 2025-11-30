@@ -52,6 +52,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	shader.reflect(&core, shader.pixelShader, constantBuffer);
 	// Reflect VS
 	shader.reflect(&core, shader.vertexShader, constantBuffer);
+	// add constant buffer to shader
 	shader.vsConstantBuffers.push_back(constantBuffer);
 	shader.psConstantBuffers.push_back(constantBuffer);
 
@@ -59,14 +60,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	int height = win.height;
 
 	while (true) {
-		core.resetCommandList();
 		core.beginFrame();
+		core.resetCommandList();
 		
 		win.processMessages();
 		if (win.keys[VK_ESCAPE] == 1)
 		{
 			break;
 		}
+
 		// make lights orbit around center of screen
 		float dt = timer.dt();
 		constBufferCPU2.time += dt;
@@ -76,10 +78,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 				height / 2.0f + (sinf(angle) * (height * 0.3f)),
 				0, 0);
 		};
-		
 		// update constant buffer
-		constantBuffer.update("time", &constBufferCPU2.time);
-		constantBuffer.update("lights", &constBufferCPU2.lights);
+		constantBuffer.updateAll(constBufferCPU2);
 
 		core.beginRenderPass();
 

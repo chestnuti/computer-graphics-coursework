@@ -80,6 +80,12 @@ public:
 
 
 	void init(HWND hwnd, int _width, int _height) {
+		// Enable debug layer
+		ID3D12Debug1* debug;
+		D3D12GetDebugInterface(IID_PPV_ARGS(&debug));
+		debug->EnableDebugLayer();
+		debug->Release();
+
 		// Enumerate adapters
 		IDXGIAdapter1* adapterf;
 		std::vector<IDXGIAdapter1*> adapters;
