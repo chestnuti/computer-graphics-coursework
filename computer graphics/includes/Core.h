@@ -363,5 +363,16 @@ public:
 		return swapchain->GetCurrentBackBufferIndex();
 	}
 
-
+	~Core() {
+		rootSignature->Release();
+		graphicsCommandList[0]->Release();
+		graphicsCommandAllocator[0]->Release();
+		graphicsCommandList[1]->Release();
+		graphicsCommandAllocator[1]->Release();
+		swapchain->Release();
+		computeQueue->Release();
+		copyQueue->Release();
+		graphicsQueue->Release();
+		device->Release();
+	}
 };

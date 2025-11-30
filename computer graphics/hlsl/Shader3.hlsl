@@ -22,3 +22,15 @@ float4 PS(PS_INPUT input) : SV_Target0
     accumulated *= input.Colour;
     return float4(accumulated, 1.0);
 }
+struct VS_INPUT
+{
+    float4 Pos : POSITION;
+    float3 Colour : COLOUR;
+};
+PS_INPUT VS(VS_INPUT input)
+{
+    PS_INPUT output;
+    output.Pos = input.Pos;
+    output.Colour = input.Colour;
+    return output;
+}

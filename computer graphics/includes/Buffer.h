@@ -202,7 +202,7 @@ public:
 		cbDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 		core->device->CreateCommittedResource(&heapprops, D3D12_HEAP_FLAG_NONE, &cbDesc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL,
 			IID_PPV_ARGS(&constantBuffer));
-		constantBuffer->Map(0, NULL, (void**)&buffer);	//!Question: why index 0? And what is the &buffer as it is never initialized?
+		constantBuffer->Map(0, NULL, (void**)&buffer);	//0 measns no subresource, NULL means entire resource, save pointer to data
 	}
 
 	// update via memcpy

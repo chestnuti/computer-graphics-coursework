@@ -47,26 +47,24 @@ public:
 		return buffer.str();
 	}
 
-	void reflect(ID3DBlob* shader){
+	void reflect(Core* core, ID3DBlob* shader, ConstantBuffer &buffer) {
 		// Reflect shader to get constant buffer info
 		ID3D12ShaderReflection* reflection;
 		D3DReflect(shader->GetBufferPointer(), shader->GetBufferSize(), IID_PPV_ARGS(&reflection));
 		D3D12_SHADER_DESC desc;
 		reflection->GetDesc(&desc);
+
 		// Iterate over constant buffers
 		for (int i = 0; i < desc.ConstantBuffers; i++)
 		{
-			// Get details of each constant buffer
-			ConstantBuffer buffer;
 			ID3D12ShaderReflectionConstantBuffer* constantBuffer = reflection->GetConstantBufferByIndex(i);
 			D3D12_SHADER_BUFFER_DESC cbDesc;
 			constantBuffer->GetDesc(&cbDesc);
 			buffer.name = cbDesc.Name;
 			unsigned int totalSize = 0;
 			// Iterate over variables in constant buffer
-			for(int j = 0; j < cbDesc.Variables; j++)
+			for (int j = 0; j < cbDesc.Variables; j++)
 			{
-				// Fill in variable details
 				ID3D12ShaderReflectionVariable* var = constantBuffer->GetVariableByIndex(j);
 				D3D12_SHADER_VARIABLE_DESC vDesc;
 				var->GetDesc(&vDesc);
@@ -75,21 +73,27 @@ public:
 				bufferVariable.size = vDesc.Size;
 				buffer.constantBufferData.insert({ vDesc.Name, bufferVariable });
 				totalSize += bufferVariable.size;
-			}
+			}			
 		}
+
+		reflection->Release();
 	}
 
-	void apply(Core* core)
-	{
-		for (int i = 0; i < vsConstantBuffers.size(); i++)
+
+	void apply(Core* core) {
+		// bind VS constant buffers
+		for (int i = 0; i < vsConstantBuffers.size(); i++) 
 		{
 			core->getCommandList()->SetGraphicsRootConstantBufferView(i, vsConstantBuffers[i].getGPUAddress());
-			vsConstantBuffers[i].next();
+			//vsConstantBuffers[i].next();
 		}
-		for (int i = 0; i < psConstantBuffers.size(); i++)
+
+		// bind PS constant buffers, starting after VS CBVs
+		int psStartIndex = vsConstantBuffers.size();
+		for (int i = 0; i < psConstantBuffers.size(); i++) 
 		{
-			core->getCommandList()->SetGraphicsRootConstantBufferView(i, psConstantBuffers[i].getGPUAddress());
-			psConstantBuffers[i].next();
+			core->getCommandList()->SetGraphicsRootConstantBufferView(psStartIndex + i, psConstantBuffers[i].getGPUAddress());
+			//psConstantBuffers[i].next();
 		}
 	}
 

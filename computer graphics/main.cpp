@@ -35,8 +35,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	// Compile shaders
 	Shader shader;
-	shader.init("./hlsl/Shader1.hlsl", "./hlsl/Shader3.hlsl");
-
+	shader.init("./hlsl/Shader3.hlsl", "./hlsl/Shader3.hlsl");
+	
 	// Create PSO manager
 	PSOManager psos;
 	psos.createPSO(&core, "Triangle", shader.vertexShader, shader.pixelShader, sst.vb.inputLayoutDesc);
@@ -47,13 +47,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	// Create constant buffer
 	ConstantBuffer constantBuffer;
-	constantBuffer.init(&core, sizeof(ConstantBufferVariable));	//!Question: What the size should be here?
-
-	// Define constant buffer variables and their offsets/sizes
-	ConstantBufferVariable cbVarTime;
-	cbVarTime.offset = 0;
-	cbVarTime.size = sizeof(constBufferCPU2);
-	constantBuffer.constantBufferData.insert({ "time", cbVarTime });
+	constantBuffer.init(&core, sizeof(ConstantBuffer2));
+	// Reflect PS
+	shader.reflect(&core, shader.pixelShader, constantBuffer);
+	// Reflect VS
+	shader.reflect(&core, shader.vertexShader, constantBuffer);
+	shader.vsConstantBuffers.push_back(constantBuffer);
+	shader.psConstantBuffers.push_back(constantBuffer);
 
 	int width = win.width;
 	int height = win.height;
@@ -61,7 +61,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	while (true) {
 		core.resetCommandList();
 		core.beginFrame();
-
+		
 		win.processMessages();
 		if (win.keys[VK_ESCAPE] == 1)
 		{
@@ -76,20 +76,26 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 				height / 2.0f + (sinf(angle) * (height * 0.3f)),
 				0, 0);
 		};
-		// draw triangle with time-based pulsing color
+		
+		// update constant buffer
+		constantBuffer.update("time", &constBufferCPU2.time);
+		constantBuffer.update("lights", &constBufferCPU2.lights);
+
 		core.beginRenderPass();
-		//constantBuffer.update(&constBufferCPU2, sizeof(ConstantBuffer2), core.frameIndex());
-		constantBuffer.update("time", &constBufferCPU2);
-		// Bind Constant Buffer View to Root Signature index
-		core.getCommandList()->SetGraphicsRootConstantBufferView(0, constantBuffer.getGPUAddress());
-		core.getCommandList()->SetGraphicsRootConstantBufferView(1, constantBuffer.getGPUAddress());
+
+		// apply shader
+		shader.apply(&core);
+
+		// bind pso
 		psos.bind(&core, "Triangle");
+
+		// draw triangle
 		sst.vb.draw(&core);
 
 		core.finishFrame();
 	}
 	core.flushGraphicsQueue();
-
+	return 0;
 }
 
 
