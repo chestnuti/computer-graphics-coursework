@@ -47,7 +47,7 @@ public:
 		return buffer.str();
 	}
 
-	void reflect(Core* core, ID3DBlob* shader, ConstantBuffer &buffer) {
+	void reflect(Core* core, ID3DBlob* shader, std::vector<ConstantBuffer> &toBuffer) {
 		// Reflect shader to get constant buffer info
 		ID3D12ShaderReflection* reflection;
 		D3DReflect(shader->GetBufferPointer(), shader->GetBufferSize(), IID_PPV_ARGS(&reflection));
@@ -60,6 +60,8 @@ public:
 			ID3D12ShaderReflectionConstantBuffer* constantBuffer = reflection->GetConstantBufferByIndex(i);
 			D3D12_SHADER_BUFFER_DESC cbDesc;
 			constantBuffer->GetDesc(&cbDesc);
+			ConstantBuffer buffer;
+			buffer.init(core, cbDesc.Size, 1);
 			buffer.name = cbDesc.Name;
 			unsigned int totalSize = 0;
 			// Iterate over variables in constant buffer
@@ -74,8 +76,8 @@ public:
 				buffer.constantBufferData.insert({ vDesc.Name, bufferVariable });
 				totalSize += bufferVariable.size;
 			}			
+			toBuffer.push_back(buffer);
 		}
-
 		reflection->Release();
 	}
 

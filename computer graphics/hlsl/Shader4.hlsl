@@ -5,7 +5,7 @@ float4x4 VP;
 };
 struct VS_INPUT
 {
-    float4 Pos : POS;
+    float4 Pos : POSITION;
     float3 Normal : NORMAL;
     float3 Tangent : TANGENT;
     float2 TexCoords : TEXCOORD;

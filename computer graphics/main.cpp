@@ -20,6 +20,12 @@ struct alignas(16) ConstantBuffer2
 	Vec4 lights[4];
 };
 
+struct alignas(16) staticMeshBuffer
+{
+	Mat4 W;
+	Mat4 VP;
+};
+
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	// Create window and initialize core
@@ -31,11 +37,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	GamesEngineeringBase::Timer timer;
 
 	ScreenSpaceTriangle sst;
-	sst.init(core);
+	sst.init(&core);
 
 	// Compile shaders
 	Shader shader;
-	shader.init("./hlsl/Shader3.hlsl", "./hlsl/Shader3.hlsl");
+	shader.init("./hlsl/Shader4.hlsl", "./hlsl/Shader4.hlsl");
 	
 	// Create PSO manager
 	PSOManager psos;
@@ -43,18 +49,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	// make triangle pulse with time
 	ConstantBuffer2 constBufferCPU2;
-	constBufferCPU2.time = 0;
+	//constBufferCPU2.time = 0;
 
 	// Create constant buffer
 	ConstantBuffer constantBuffer;
 	constantBuffer.init(&core, sizeof(ConstantBuffer2), 1);
 	// Reflect PS
-	shader.reflect(&core, shader.pixelShader, constantBuffer);
+	shader.reflect(&core, shader.pixelShader, shader.vsConstantBuffers);
 	// Reflect VS
-	shader.reflect(&core, shader.vertexShader, constantBuffer);
-	// add constant buffer to shader
-	shader.vsConstantBuffers.push_back(constantBuffer);
-	shader.psConstantBuffers.push_back(constantBuffer);
+	shader.reflect(&core, shader.vertexShader, shader.psConstantBuffers);
 
 	int width = win.width;
 	int height = win.height;
@@ -70,16 +73,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		}
 
 		// make lights orbit around center of screen
-		float dt = timer.dt();
+		/*float dt = timer.dt();
 		constBufferCPU2.time += dt;
 		for (int i = 0; i < 4; i++) {
 			float angle = constBufferCPU2.time + (i * M_PI / 2.0f);
 			constBufferCPU2.lights[i] = Vec4(width / 2.0f + (cosf(angle) * (width * 0.3f)),
 				height / 2.0f + (sinf(angle) * (height * 0.3f)),
 				0, 0);
-		};
+		};*/
 		// update constant buffer
-		constantBuffer.updateAll(constBufferCPU2);
+		//constantBuffer.updateAll(constBufferCPU2);
 		//constantBuffer.update("time", &constBufferCPU2.time);
 
 		core.beginRenderPass();

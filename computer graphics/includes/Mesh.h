@@ -152,11 +152,9 @@ public:
 	D3D12_VERTEX_BUFFER_VIEW vbView;
 	D3D12_INDEX_BUFFER_VIEW ibView;
 	// Layout of the vertex buffer
-	D3D12_INPUT_ELEMENT_DESC inputLayout[2];
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
 
 	unsigned int numMeshIndices;
-
 
 	Mesh() : vertexBuffer(nullptr), vbView() {}
 
@@ -187,13 +185,6 @@ public:
 		vbView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 		vbView.StrideInBytes = vertexSizeInBytes;
 		vbView.SizeInBytes = numVertices * vertexSizeInBytes;
-		// Fill input layout description
-		inputLayout[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-		inputLayout[1] = { "COLOUR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-		inputLayoutDesc.NumElements = 2;
-		inputLayoutDesc.pInputElementDescs = inputLayout;
 		
 		// Create index buffer
 		D3D12_RESOURCE_DESC ibDesc;
@@ -263,7 +254,7 @@ public:
 		vertices[2].colour = Colour(0, 0, 1.0f);
 	}
 	
-	void init(Core& core) {
+	void init(Core* core) {
 		std::vector<STATIC_VERTEX> verts;
 		for (int i = 0; i < 3; i++)
 		{
@@ -276,9 +267,103 @@ public:
 			verts.push_back(v);
 		}
 		std::vector<unsigned int> indices = { 0, 1, 2 };
-		vb.init(&core, verts, indices);
+		vb.init(core, verts, indices);
 	}
 
 
+
+};
+
+
+STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
+{
+	STATIC_VERTEX v;
+	v.pos = p;
+	v.normal = n;
+	v.tangent = Vec3(0, 0, 0); // For now
+	v.tu = tu;
+	v.tv = tv;
+	return v;
+}
+
+class Plane {
+public:
+	std::vector<STATIC_VERTEX> vertices;
+	std::vector<unsigned int> indices;
+	Mesh vb;
+	
+	void init(Core* core) {
+		vertices.push_back(addVertex(Vec3(-15, 0, -15), Vec3(0, 1, 0), 0, 0));
+		vertices.push_back(addVertex(Vec3(15, 0, -15), Vec3(0, 1, 0), 1, 0));
+		vertices.push_back(addVertex(Vec3(-15, 0, 15), Vec3(0, 1, 0), 0, 1));
+		vertices.push_back(addVertex(Vec3(15, 0, 15), Vec3(0, 1, 0), 1, 1));
+		
+		indices.push_back(2); indices.push_back(1); indices.push_back(0);
+		indices.push_back(1); indices.push_back(2); indices.push_back(3);
+		vb.init(core, vertices, indices);
+	}
+};
+
+class Cube {
+public:
+	std::vector<STATIC_VERTEX> vertices;
+	std::vector<unsigned int> indices;
+
+	Vec3 p0 = Vec3(-1.0f, -1.0f, -1.0f);
+	Vec3 p1 = Vec3(1.0f, -1.0f, -1.0f);
+	Vec3 p2 = Vec3(1.0f, 1.0f, -1.0f);
+	Vec3 p3 = Vec3(-1.0f, 1.0f, -1.0f);
+	Vec3 p4 = Vec3(-1.0f, -1.0f, 1.0f);
+	Vec3 p5 = Vec3(1.0f, -1.0f, 1.0f);
+	Vec3 p6 = Vec3(1.0f, 1.0f, 1.0f);
+	Vec3 p7 = Vec3(-1.0f, 1.0f, 1.0f);
+
+	Cube(){
+		// Front face
+		vertices.push_back(addVertex(p0, Vec3(0.0f, 0.0f, -1.0f), 0.0f, 1.0f));
+		vertices.push_back(addVertex(p1, Vec3(0.0f, 0.0f, -1.0f), 1.0f, 1.0f));
+		vertices.push_back(addVertex(p2, Vec3(0.0f, 0.0f, -1.0f), 1.0f, 0.0f));
+		vertices.push_back(addVertex(p3, Vec3(0.0f, 0.0f, -1.0f), 0.0f, 0.0f));
+		// Back face
+		vertices.push_back(addVertex(p5, Vec3(0.0f, 0.0f, 1.0f), 0.0f, 1.0f));
+		vertices.push_back(addVertex(p4, Vec3(0.0f, 0.0f, 1.0f), 1.0f, 1.0f));
+		vertices.push_back(addVertex(p7, Vec3(0.0f, 0.0f, 1.0f), 1.0f, 0.0f));
+		vertices.push_back(addVertex(p6, Vec3(0.0f, 0.0f, 1.0f), 0.0f, 0.0f));
+		// Left face
+		vertices.push_back(addVertex(p4, Vec3(-1.0f, 0.0f, 0.0f), 0.0f, 1.0f));
+		vertices.push_back(addVertex(p0, Vec3(-1.0f, 0.0f, 0.0f), 1.0f, 1.0f));
+		vertices.push_back(addVertex(p3, Vec3(-1.0f, 0.0f, 0.0f), 1.0f, 0.0f));
+		vertices.push_back(addVertex(p7, Vec3(-1.0f, 0.0f, 0.0f), 0.0f, 0.0f));
+		// Right face
+		vertices.push_back(addVertex(p1, Vec3(1.0f, 0.0f, 0.0f), 0.0f, 1.0f));
+		vertices.push_back(addVertex(p5, Vec3(1.0f, 0.0f, 0.0f), 1.0f, 1.0f));
+		vertices.push_back(addVertex(p6, Vec3(1.0f, 0.0f, 0.0f), 1.0f, 0.0f));
+		vertices.push_back(addVertex(p2, Vec3(1.0f, 0.0f, 0.0f), 0.0f, 0.0f));
+		// Top face
+		vertices.push_back(addVertex(p3, Vec3(0.0f, 1.0f, 0.0f), 0.0f, 1.0f));
+		vertices.push_back(addVertex(p2, Vec3(0.0f, 1.0f, 0.0f), 1.0f, 1.0f));
+		vertices.push_back(addVertex(p6, Vec3(0.0f, 1.0f, 0.0f), 1.0f, 0.0f));
+		vertices.push_back(addVertex(p7, Vec3(0.0f, 1.0f, 0.0f), 0.0f, 0.0f));
+		// Bottom face
+		vertices.push_back(addVertex(p4, Vec3(0.0f, -1.0f, 0.0f), 0.0f, 1.0f));
+		vertices.push_back(addVertex(p5, Vec3(0.0f, -1.0f, 0.0f), 1.0f, 1.0f));
+		vertices.push_back(addVertex(p1, Vec3(0.0f, -1.0f, 0.0f), 1.0f, 0.0f));
+		vertices.push_back(addVertex(p0, Vec3(0.0f, -1.0f, 0.0f), 0.0f, 0.0f));
+
+		// Add Indices
+		indices.push_back(0); indices.push_back(1); indices.push_back(2);
+		indices.push_back(0); indices.push_back(2); indices.push_back(3);
+		indices.push_back(4); indices.push_back(5); indices.push_back(6);
+		indices.push_back(4); indices.push_back(6); indices.push_back(7);
+		indices.push_back(8); indices.push_back(9); indices.push_back(10);
+		indices.push_back(8); indices.push_back(10); indices.push_back(11);
+		indices.push_back(12); indices.push_back(13); indices.push_back(14);
+		indices.push_back(12); indices.push_back(14); indices.push_back(15);
+		indices.push_back(16); indices.push_back(17); indices.push_back(18);
+		indices.push_back(16); indices.push_back(18); indices.push_back(19);
+		indices.push_back(20); indices.push_back(21); indices.push_back(22);
+		indices.push_back(20); indices.push_back(22); indices.push_back(23);
+
+	}
 
 };
