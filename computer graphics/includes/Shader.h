@@ -85,7 +85,7 @@ public:
 		for (int i = 0; i < vsConstantBuffers.size(); i++) 
 		{
 			core->getCommandList()->SetGraphicsRootConstantBufferView(i, vsConstantBuffers[i].getGPUAddress());
-			//vsConstantBuffers[i].next();
+			vsConstantBuffers[i].next();
 		}
 
 		// bind PS constant buffers, starting after VS CBVs
@@ -93,7 +93,7 @@ public:
 		for (int i = 0; i < psConstantBuffers.size(); i++) 
 		{
 			core->getCommandList()->SetGraphicsRootConstantBufferView(psStartIndex + i, psConstantBuffers[i].getGPUAddress());
-			//psConstantBuffers[i].next();
+			psConstantBuffers[i].next();
 		}
 	}
 

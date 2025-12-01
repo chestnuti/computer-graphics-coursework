@@ -112,21 +112,55 @@ struct PRIM_VERTEX
 	Colour colour;
 };
 
+struct STATIC_VERTEX
+{
+	Vec3 pos;
+	Vec3 normal;
+	Vec3 tangent;
+	float tu;
+	float tv;
+};
 
-class VertexBuffer {
+class VertexLayoutCache
+{
+public:
+	static const D3D12_INPUT_LAYOUT_DESC& getStaticLayout() {
+		static const D3D12_INPUT_ELEMENT_DESC inputLayoutStatic[] = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		};
+		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutStatic, 4 };
+		return desc;
+	}
+
+};
+
+
+
+class Mesh {
 public:
 	// Vertex buffer
 	ID3D12Resource* vertexBuffer;
+	ID3D12Resource* indexBuffer;
 	// Vertex buffer view
 	D3D12_VERTEX_BUFFER_VIEW vbView;
+	D3D12_INDEX_BUFFER_VIEW ibView;
 	// Layout of the vertex buffer
 	D3D12_INPUT_ELEMENT_DESC inputLayout[2];
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
 
+	unsigned int numMeshIndices;
 
-	VertexBuffer() : vertexBuffer(nullptr), vbView() {}
 
-	void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices)
+	Mesh() : vertexBuffer(nullptr), vbView() {}
+
+	void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices, unsigned int* indices, int numIndices)
 	{
 		// Create an upload heap to upload the vertex buffer data
 		D3D12_HEAP_PROPERTIES heapprops = {};
@@ -160,13 +194,55 @@ public:
 		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		inputLayoutDesc.NumElements = 2;
 		inputLayoutDesc.pInputElementDescs = inputLayout;
+		
+		// Create index buffer
+		D3D12_RESOURCE_DESC ibDesc;
+		memset(&ibDesc, 0, sizeof(D3D12_RESOURCE_DESC));
+		ibDesc.Width = numIndices * sizeof(unsigned int);
+		ibDesc.Height = 1;
+		ibDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		ibDesc.DepthOrArraySize = 1;
+		ibDesc.MipLevels = 1;
+		ibDesc.SampleDesc.Count = 1;
+		ibDesc.SampleDesc.Quality = 0;
+		ibDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		HRESULT hr;
+		hr = core->device->CreateCommittedResource(&heapprops, D3D12_HEAP_FLAG_NONE, &ibDesc,
+			D3D12_RESOURCE_STATE_COMMON, NULL, IID_PPV_ARGS(&indexBuffer));
+		core->uploadResource(indexBuffer, indices, numIndices * sizeof(unsigned int),
+			D3D12_RESOURCE_STATE_INDEX_BUFFER);
+		// Create index buffer view
+		ibView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+		ibView.Format = DXGI_FORMAT_R32_UINT;
+		ibView.SizeInBytes = numIndices * sizeof(unsigned int);
+		numMeshIndices = numIndices;
+
 	}
+
+	void init(Core* core, std::vector<STATIC_VERTEX> vertices, std::vector<unsigned int> indices)
+	{
+		init(core, &vertices[0], sizeof(STATIC_VERTEX), vertices.size(), &indices[0], indices.size());
+		inputLayoutDesc = VertexLayoutCache::getStaticLayout();
+	}
+
 
 	void draw(Core* core)
 	{
 		core->getCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		core->getCommandList()->IASetVertexBuffers(0, 1, &vbView);
-		core->getCommandList()->DrawInstanced(3, 1, 0, 0);
+		core->getCommandList()->IASetIndexBuffer(&ibView);
+		core->getCommandList()->DrawIndexedInstanced(numMeshIndices, 1, 0, 0, 0);
+	}
+
+	STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
+	{
+		STATIC_VERTEX v;
+		v.pos = p;
+		v.normal = n;
+		v.tangent = Vec3(0, 0, 0); // For now
+		v.tu = tu;
+		v.tv = tv;
+		return v;
 	}
 };
 
@@ -176,7 +252,7 @@ class ScreenSpaceTriangle {
 public:
 	// Define triangle vertices
 	PRIM_VERTEX vertices[3];
-	VertexBuffer vb;
+	Mesh vb;
 
 	ScreenSpaceTriangle() {
 		vertices[0].position = Vec3(0, 1.0f, 0);
@@ -188,7 +264,21 @@ public:
 	}
 	
 	void init(Core& core) {
-		vb.init(&core, vertices, sizeof(PRIM_VERTEX), 3);
+		std::vector<STATIC_VERTEX> verts;
+		for (int i = 0; i < 3; i++)
+		{
+			STATIC_VERTEX v;
+			v.pos = vertices[i].position;
+			v.normal = Vec3(0, 0, -1);
+			v.tangent = Vec3(1, 0, 0);
+			v.tu = 0.0f;
+			v.tv = 0.0f;
+			verts.push_back(v);
+		}
+		std::vector<unsigned int> indices = { 0, 1, 2 };
+		vb.init(&core, verts, indices);
 	}
+
+
 
 };

@@ -47,7 +47,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	// Create constant buffer
 	ConstantBuffer constantBuffer;
-	constantBuffer.init(&core, sizeof(ConstantBuffer2));
+	constantBuffer.init(&core, sizeof(ConstantBuffer2), 1);
 	// Reflect PS
 	shader.reflect(&core, shader.pixelShader, constantBuffer);
 	// Reflect VS
@@ -80,6 +80,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		};
 		// update constant buffer
 		constantBuffer.updateAll(constBufferCPU2);
+		//constantBuffer.update("time", &constBufferCPU2.time);
 
 		core.beginRenderPass();
 
