@@ -11,9 +11,7 @@ public:
 	ID3DBlob* vertexShader;
 	ID3DBlob* pixelShader;
 
-	ConstantBufferVariable vsConstantBufferVar;
 	std::vector<ConstantBuffer> vsConstantBuffers;
-	ConstantBufferVariable psConstantBufferVar;
 	std::vector<ConstantBuffer> psConstantBuffers;
 
 	Shader() : vertexShader(nullptr), pixelShader(nullptr) {}
@@ -22,18 +20,18 @@ public:
 		// Compile shaders
 		ID3DBlob* status;
 		std::string vertexShaderStr = readShaderFile(vertexShaderCode);
-		HRESULT hr = D3DCompile(vertexShaderStr.c_str(), strlen(vertexShaderStr.c_str()), NULL,
+		HRESULT hr1 = D3DCompile(vertexShaderStr.c_str(), strlen(vertexShaderStr.c_str()), NULL,
 			NULL, NULL, "VS", "vs_5_0", 0, 0, &vertexShader, &status);
 		//check hr
-		if (FAILED(hr))
+		if (FAILED(hr1))
 		{
 			(char*)status->GetBufferPointer();
 		}
 		std::string pixelShaderStr = readShaderFile(pixelShaderCode);
-		hr = D3DCompile(pixelShaderStr.c_str(), strlen(pixelShaderStr.c_str()), NULL,
+		HRESULT hr2 = D3DCompile(pixelShaderStr.c_str(), strlen(pixelShaderStr.c_str()), NULL,
 			NULL, NULL, "PS", "ps_5_0", 0, 0, &pixelShader, &status);
 		//check hr
-		if (FAILED(hr))
+		if (FAILED(hr2))
 		{
 			(char*)status->GetBufferPointer();
 		}
@@ -75,7 +73,7 @@ public:
 				bufferVariable.size = vDesc.Size;
 				buffer.constantBufferData.insert({ vDesc.Name, bufferVariable });
 				totalSize += bufferVariable.size;
-			}			
+			}
 			toBuffer.push_back(buffer);
 		}
 		reflection->Release();
@@ -174,4 +172,24 @@ public:
 		core->getCommandList()->SetPipelineState(psos[name]);
 	}
 
+};
+
+
+class ShaderManager {
+public:
+	std::unordered_map<std::string, Shader*> shaders;
+
+	Shader* createShader(Core* core, std::string name, const std::string& vertexShaderFile, const std::string& pixelShaderFile)
+	{
+		if (shaders.find(name) != shaders.end())
+		{
+			return shaders[name];
+		}
+		Shader* shader = new Shader();
+		shader->init(vertexShaderFile, pixelShaderFile);
+		shader->reflect(core, shader->vertexShader, shader->vsConstantBuffers);
+		shader->reflect(core, shader->pixelShader, shader->psConstantBuffers);
+		shaders.insert({ name, shader });
+		return shader;
+	}
 };

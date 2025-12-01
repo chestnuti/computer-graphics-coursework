@@ -121,6 +121,19 @@ struct STATIC_VERTEX
 	float tv;
 };
 
+STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
+{
+	STATIC_VERTEX v;
+	v.pos = p;
+	v.normal = n;
+	v.tangent = Vec3(0, 0, 0); // For now
+	v.tu = tu;
+	v.tv = tv;
+	return v;
+}
+
+
+
 class VertexLayoutCache
 {
 public:
@@ -128,20 +141,17 @@ public:
 		static const D3D12_INPUT_ELEMENT_DESC inputLayoutStatic[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
 		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "COLOUR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		//{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		//D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		//D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		};
-		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutStatic, 4 };
+		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutStatic, 2 };
 		return desc;
 	}
-
 };
-
-
 
 class Mesh {
 public:
@@ -223,17 +233,7 @@ public:
 		core->getCommandList()->IASetVertexBuffers(0, 1, &vbView);
 		core->getCommandList()->IASetIndexBuffer(&ibView);
 		core->getCommandList()->DrawIndexedInstanced(numMeshIndices, 1, 0, 0, 0);
-	}
 
-	STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
-	{
-		STATIC_VERTEX v;
-		v.pos = p;
-		v.normal = n;
-		v.tangent = Vec3(0, 0, 0); // For now
-		v.tu = tu;
-		v.tv = tv;
-		return v;
 	}
 };
 
@@ -269,22 +269,7 @@ public:
 		std::vector<unsigned int> indices = { 0, 1, 2 };
 		vb.init(core, verts, indices);
 	}
-
-
-
 };
-
-
-STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
-{
-	STATIC_VERTEX v;
-	v.pos = p;
-	v.normal = n;
-	v.tangent = Vec3(0, 0, 0); // For now
-	v.tu = tu;
-	v.tv = tv;
-	return v;
-}
 
 class Plane {
 public:

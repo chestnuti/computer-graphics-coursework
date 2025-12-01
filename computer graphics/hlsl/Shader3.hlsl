@@ -1,4 +1,4 @@
- cbuffer ConstantBuffer2 : register(b0)
+cbuffer ConstantBuffer2 : register(b0)
 {
     float time;
     float2 lights[4];

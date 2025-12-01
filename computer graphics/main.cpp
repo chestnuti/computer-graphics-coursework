@@ -41,30 +41,25 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	// Compile shaders
 	Shader shader;
-	shader.init("./hlsl/Shader4.hlsl", "./hlsl/Shader4.hlsl");
+	shader.init("./hlsl/Shader3.hlsl", "./hlsl/Shader3.hlsl");
 	
 	// Create PSO manager
 	PSOManager psos;
 	psos.createPSO(&core, "Triangle", shader.vertexShader, shader.pixelShader, sst.vb.inputLayoutDesc);
 
-	// make triangle pulse with time
-	ConstantBuffer2 constBufferCPU2;
-	//constBufferCPU2.time = 0;
-
-	// Create constant buffer
-	ConstantBuffer constantBuffer;
-	constantBuffer.init(&core, sizeof(ConstantBuffer2), 1);
-	// Reflect PS
-	shader.reflect(&core, shader.pixelShader, shader.vsConstantBuffers);
 	// Reflect VS
-	shader.reflect(&core, shader.vertexShader, shader.psConstantBuffers);
-
+	shader.reflect(&core, shader.vertexShader, shader.vsConstantBuffers);
+	// Reflect PS
+	shader.reflect(&core, shader.pixelShader, shader.psConstantBuffers);
+	
 	int width = win.width;
 	int height = win.height;
 
+	float time = 0.0f;
+	Vec4 lights[4];
+
 	while (true) {
 		core.beginFrame();
-		core.resetCommandList();
 		
 		win.processMessages();
 		if (win.keys[VK_ESCAPE] == 1)
@@ -73,17 +68,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		}
 
 		// make lights orbit around center of screen
-		/*float dt = timer.dt();
-		constBufferCPU2.time += dt;
+		float dt = timer.dt();
 		for (int i = 0; i < 4; i++) {
-			float angle = constBufferCPU2.time + (i * M_PI / 2.0f);
-			constBufferCPU2.lights[i] = Vec4(width / 2.0f + (cosf(angle) * (width * 0.3f)),
+			float angle = time + (i * M_PI / 2.0f);
+			lights[i] = Vec4(width / 2.0f + (cosf(angle) * (width * 0.3f)),
 				height / 2.0f + (sinf(angle) * (height * 0.3f)),
 				0, 0);
-		};*/
+		};
 		// update constant buffer
-		//constantBuffer.updateAll(constBufferCPU2);
-		//constantBuffer.update("time", &constBufferCPU2.time);
+		shader.psConstantBuffers[0].update("time", &time);
+		shader.psConstantBuffers[0].update("lights", &lights);
 
 		core.beginRenderPass();
 

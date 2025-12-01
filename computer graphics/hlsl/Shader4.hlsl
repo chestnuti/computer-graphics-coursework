@@ -1,7 +1,7 @@
 cbuffer staticMeshBuffer
 {
-float4x4 W;
-float4x4 VP;
+    float4x4 W;
+    float4x4 VP;
 };
 struct VS_INPUT
 {
