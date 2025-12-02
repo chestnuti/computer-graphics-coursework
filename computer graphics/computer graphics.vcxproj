@@ -127,6 +127,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="includes\Buffer.h" />
+    <ClInclude Include="includes\Camera.h" />
     <ClInclude Include="includes\Core.h" />
     <ClInclude Include="includes\GamesEngineeringBase.h" />
     <ClInclude Include="includes\GEMLoader.h" />

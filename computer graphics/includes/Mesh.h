@@ -141,14 +141,14 @@ public:
 		static const D3D12_INPUT_ELEMENT_DESC inputLayoutStatic[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
 		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOUR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		//{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		//D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		//D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		};
-		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutStatic, 2 };
+		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutStatic, 4 };
 		return desc;
 	}
 };
@@ -293,6 +293,7 @@ class Cube {
 public:
 	std::vector<STATIC_VERTEX> vertices;
 	std::vector<unsigned int> indices;
+	Mesh vb;
 
 	Vec3 p0 = Vec3(-1.0f, -1.0f, -1.0f);
 	Vec3 p1 = Vec3(1.0f, -1.0f, -1.0f);
@@ -303,7 +304,7 @@ public:
 	Vec3 p6 = Vec3(1.0f, 1.0f, 1.0f);
 	Vec3 p7 = Vec3(-1.0f, 1.0f, 1.0f);
 
-	Cube(){
+	void init(Core* core){
 		// Front face
 		vertices.push_back(addVertex(p0, Vec3(0.0f, 0.0f, -1.0f), 0.0f, 1.0f));
 		vertices.push_back(addVertex(p1, Vec3(0.0f, 0.0f, -1.0f), 1.0f, 1.0f));
@@ -349,6 +350,6 @@ public:
 		indices.push_back(20); indices.push_back(21); indices.push_back(22);
 		indices.push_back(20); indices.push_back(22); indices.push_back(23);
 
+		vb.init(core, vertices, indices);
 	}
-
 };

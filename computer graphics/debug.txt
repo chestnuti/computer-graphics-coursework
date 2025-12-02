@@ -1,0 +1,50 @@
+=== Shader Compilation ===
+VS size: 596
+PS size: 1216
+
+=== VS Constant Buffers ===
+
+=== PS Constant Buffers ===
+PS CB 0: ConstantBuffer2
+  - lights offset=16 size=56
+  - time offset=0 size=4
+
+=== Frame 0 ===
+time: 0.0157586
+cos(time): 0.999876
+light[0]: (819.162, 516.841)
+light[1]: (507.159, 819.162)
+light[2]: (204.838, 507.159)
+light[3]: (516.841, 204.838)
+
+=== Frame 60 ===
+time: 0.782833
+cos(time): 0.708918
+light[0]: (729.78, 728.665)
+light[1]: (295.335, 729.78)
+light[2]: (294.22, 295.335)
+light[3]: (728.665, 294.22)
+
+=== Frame 120 ===
+time: 1.58298
+cos(time): -0.0121848
+light[0]: (508.257, 819.177)
+light[1]: (204.823, 508.257)
+light[2]: (515.743, 204.823)
+light[3]: (819.177, 515.743)
+
+=== Frame 180 ===
+time: 2.38352
+cos(time): -0.726162
+light[0]: (288.923, 723.207)
+light[1]: (300.793, 288.923)
+light[2]: (735.077, 300.793)
+light[3]: (723.207, 735.077)
+
+=== Frame 240 ===
+time: 3.18417
+cos(time): -0.999094
+light[0]: (205.078, 498.925)
+light[1]: (525.075, 205.078)
+light[2]: (818.922, 525.075)
+light[3]: (498.925, 818.922)

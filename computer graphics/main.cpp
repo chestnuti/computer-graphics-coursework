@@ -3,25 +3,14 @@
 #include "./includes/Mesh.h"
 #include "./includes/Buffer.h"
 #include "./includes/Shader.h"
+#include "./includes/Matrix.h"
+#include "./includes/Camera.h"
 #include "./includes/GamesEngineeringBase.h"
 
 #include "./includes/GEMLoader.h"
 
 
-struct alignas(16) ConstantBuffer1
-{
-	float time;
-};
-
-struct alignas(16) ConstantBuffer2
-{
-	float time;
-	float padding[3];
-	Vec4 lights[4];
-};
-
-struct alignas(16) staticMeshBuffer
-{
+struct alignas(16) StaticMeshBuffer {
 	Mat4 W;
 	Mat4 VP;
 };
@@ -36,40 +25,44 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	core.init(win.hwnd, win.width, win.height);
 	GamesEngineeringBase::Timer timer;
 
-	ScreenSpaceTriangle sst;
+	Cube sst;
 	sst.init(&core);
 
 	// Compile shaders
 	Shader shader;
-	shader.init("./hlsl/Shader3.hlsl", "./hlsl/Shader3.hlsl");
+	shader.init("./hlsl/Shader4.hlsl", "./hlsl/Shader4.hlsl");
 	
 	// Create PSO manager
 	PSOManager psos;
-	psos.createPSO(&core, "Triangle", shader.vertexShader, shader.pixelShader, sst.vb.inputLayoutDesc);
+	psos.createPSO(&core, "sst", shader.vertexShader, shader.pixelShader, sst.vb.inputLayoutDesc);
 
-	// Reflect VS
+	// Reflect shaders to get constant buffer info
 	shader.reflect(&core, shader.vertexShader, shader.vsConstantBuffers);
-	// Reflect PS
 	shader.reflect(&core, shader.pixelShader, shader.psConstantBuffers);
 	
+	// Create camera
+	Camera camera;
+
 	int width = win.width;
 	int height = win.height;
-
+	
 	float time = 0.0f;
 	Vec4 lights[4];
-
+	StaticMeshBuffer meshBuffer;
+	meshBuffer.W = Mat4()._Identity();
+	meshBuffer.VP = camera.getViewProjectionMatrix().Transpose();
+	
+	
 	while (true) {
 		core.beginFrame();
 		
 		win.processMessages();
-		if (win.keys[VK_ESCAPE] == 1)
-		{
-			break;
-		}
+		if (win.keys[VK_ESCAPE] == 1) break;
 
 		// make lights orbit around center of screen
 		float dt = timer.dt();
-		for (int i = 0; i < 4; i++) {
+		time += dt;
+		/*for (int i = 0; i < 4; i++) {
 			float angle = time + (i * M_PI / 2.0f);
 			lights[i] = Vec4(width / 2.0f + (cosf(angle) * (width * 0.3f)),
 				height / 2.0f + (sinf(angle) * (height * 0.3f)),
@@ -77,7 +70,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		};
 		// update constant buffer
 		shader.psConstantBuffers[0].update("time", &time);
-		shader.psConstantBuffers[0].update("lights", &lights);
+		shader.psConstantBuffers[0].update("lights", &lights);*/
+		
+		// rotate cube over time
+		meshBuffer.W = Mat4().RotateY(time * 50.0f).Transpose();
+
+		// update constant buffer
+		shader.vsConstantBuffers[0].update("W", &meshBuffer.W);
+		shader.vsConstantBuffers[0].update("VP", &meshBuffer.VP);
+
 
 		core.beginRenderPass();
 
@@ -85,7 +86,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		shader.apply(&core);
 
 		// bind pso
-		psos.bind(&core, "Triangle");
+		psos.bind(&core, "sst");
 
 		// draw triangle
 		sst.vb.draw(&core);
@@ -98,7 +99,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 
 
-int main()
+/*int main()
 {
 	/*
 	//initialize a triangle
@@ -141,7 +142,7 @@ int main()
 	Triangles[1] = &axisX;
 	Triangles[2] = &axisY;
 	Triangles[3] = &axisZ;*/
-
+/*
 	//GEM model loading test
 	std::vector<GEMLoader::GEMMesh> gemmeshes;
 	GEMLoader::GEMModelLoader loader;
@@ -270,4 +271,4 @@ int main()
 
 
 	return 0;
-}
+}*/

@@ -37,6 +37,10 @@ public:
 	{
 		return Vec3(-v[0], -v[1], -v[2]);
 	}
+	Vec3 operator-(const Vec3& pVec) const
+	{
+		return Vec3(v[0] - pVec.v[0], v[1] - pVec.v[1], v[2] - pVec.v[2]);
+	}
 
 	Vec3 normalize(void)
 	{
@@ -56,7 +60,7 @@ public:
 		return v[0] * pVec.v[0] + v[1] * pVec.v[1] + v[2] * pVec.v[2];
 	}
 
-	Vec3 Cross(const Vec3& v1)
+	Vec3 cross(const Vec3& v1)
 	{
 		return Vec3(v1.v[1] * v[2] - v1.v[2] * v[1],
 			v1.v[2] * v[0] - v1.v[0] * v[2],
