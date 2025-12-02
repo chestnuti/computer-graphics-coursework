@@ -1,8 +1,8 @@
 #pragma once
 #include "Vector.h"
 
-#define ScreenWidth 1024
-#define ScreenHeight 1024
+#define ScreenWidth 1920.0f
+#define ScreenHeight 1080.0f
 
 
 class Camera {
@@ -14,7 +14,7 @@ public:
 	float clipNear;
 	float clipFar;
 
-	Camera() : position(0.0f, 3.0f, 3.0f), target(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), fov(90.0f), clipNear(0.01f), clipFar(100.0f) {
+	Camera() : position(0.0f, 3.0f, 3.0f), target(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), fov(90.0f), clipNear(0.1f), clipFar(100.0f) {
 	}
 
 	Mat4 getLookatMatrix()
@@ -47,7 +47,7 @@ public:
 
 	Mat4 getViewProjectionMatrix()
 	{
-		float aspectRatio = static_cast<float>(ScreenWidth / ScreenHeight); //window size
+		float aspectRatio = ScreenHeight / ScreenWidth; //window size
 		float fovRad = 1.0f / tanf((fov * 0.5f) * (float)M_PI / 180.0f);
 		Mat4 projectionMatrix = Mat4()._Identity();
 		projectionMatrix.m[0][0] = aspectRatio * fovRad;
@@ -62,7 +62,7 @@ public:
 	{
 		Vec4 transformed = projection.transform(getLookatMatrix());
 		//Perspective projection
-		float aspectRatio = static_cast<float>(ScreenWidth / ScreenHeight); //window size
+		float aspectRatio = static_cast<float>(ScreenHeight / ScreenWidth); //window size
 		float fovRad = 1.0f / tanf((fov * 0.5f) * (float)M_PI / 180.0f);
 		Mat4 projectionMatrix = Mat4()._Identity();
 		projectionMatrix.m[0][0] = aspectRatio * fovRad;
@@ -84,6 +84,17 @@ public:
 			projected.v[3] = remap(distance, clipNear, clipFar, 0.0f, 255.0f); //visible with depth info*/
 
 		return projected;
+	}
+
+	Vec3 getForwardVector()
+	{
+		return (target - position).normalize();
+	}
+
+	Vec3 getRightVector()
+	{
+		Vec3 outcoming = getForwardVector();
+		return up.cross(outcoming).normalize();
 	}
 
 };

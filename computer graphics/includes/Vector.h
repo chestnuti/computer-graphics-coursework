@@ -21,6 +21,13 @@ public:
 		v[2] += pVec.v[2];
 		return *this;
 	}
+	Vec3& operator-=(const Vec3& pVec)
+	{
+		v[0] -= pVec.v[0];
+		v[1] -= pVec.v[1];
+		v[2] -= pVec.v[2];
+		return *this;
+	}
 	Vec3 operator*(const Vec3& pVec) const
 	{
 		return Vec3(v[0] * pVec.v[0], v[1] * pVec.v[1], v[2] * pVec.v[2]);
@@ -60,7 +67,7 @@ public:
 		return v[0] * pVec.v[0] + v[1] * pVec.v[1] + v[2] * pVec.v[2];
 	}
 
-	Vec3 cross(const Vec3& v1)
+	Vec3 cross(const Vec3& v1) const
 	{
 		return Vec3(v1.v[1] * v[2] - v1.v[2] * v[1],
 			v1.v[2] * v[0] - v1.v[0] * v[2],
@@ -140,7 +147,7 @@ public:
 		return v[0] * pVec.v[0] + v[1] * pVec.v[1] + v[2] * pVec.v[2] + v[3] * pVec.v[3];
 	}
 
-	Vec4 cross(const Vec4& v1)
+	Vec4 cross(const Vec4& v1) const
 	{
 		return Vec4(v1.v[1] * v[2] - v1.v[2] * v[1],
 			v1.v[2] * v[0] - v1.v[0] * v[2],

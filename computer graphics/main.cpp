@@ -15,11 +15,14 @@ struct alignas(16) StaticMeshBuffer {
 	Mat4 VP;
 };
 
+void DebugPrint(const std::string& message) {
+	OutputDebugStringA((message + "\n").c_str());
+}
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	// Create window and initialize core
 	Window win;
-	win.create(1024, 1024, "My Window");
+	win.create(1920, 1080, "My Window");
 	// Initialize core
 	Core core;
 	core.init(win.hwnd, win.width, win.height);
@@ -52,7 +55,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	meshBuffer.W = Mat4()._Identity();
 	meshBuffer.VP = camera.getViewProjectionMatrix().Transpose();
 	
-	
+
 	while (true) {
 		core.beginFrame();
 		
@@ -71,9 +74,78 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		// update constant buffer
 		shader.psConstantBuffers[0].update("time", &time);
 		shader.psConstantBuffers[0].update("lights", &lights);*/
+
+		// camera controls
+		static float speed = 10.0f;
+		if (win.keys['W']) camera.position += camera.getForwardVector() * dt * speed;
+		if (win.keys['S']) camera.position -= camera.getForwardVector() * dt * speed;
+		if (win.keys['A']) camera.position -= camera.getRightVector() * dt * speed;
+		if (win.keys['D']) camera.position += camera.getRightVector() * dt * speed;
+		if (win.keys['Q']) camera.position -= camera.up * dt * speed;
+		if (win.keys['E']) camera.position += camera.up * dt * speed;
+		// mouse look
+		POINT mousePos;
+		GetCursorPos(&mousePos);
+		ScreenToClient(win.hwnd, &mousePos);
+		static bool firstMouse = true;
+		if (win.mouseButtons[0])
+		{
+			firstMouse = false;
+		}
+		else
+		{
+			firstMouse = true;
+		}
+		static int lastX = win.width / 2;
+		static int lastY = win.height / 2;
+		if (firstMouse)
+		{
+			lastX = mousePos.x;
+			lastY = mousePos.y;
+			firstMouse = false;
+		}
+		int xoffset = mousePos.x - lastX;
+		int yoffset = lastY - mousePos.y;
+		lastX = mousePos.x;
+		lastY = mousePos.y;
+		float sensitivity = 0.1f;
+		xoffset = static_cast<int>(xoffset * sensitivity);
+		yoffset = static_cast<int>(yoffset * sensitivity);
+		static float yaw = -90.0f;
+		static float pitch = 0.0f;
+		yaw += static_cast<float>(xoffset);
+		pitch += static_cast<float>(yoffset);
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+		Vec3 front;
+		front.v[0] = cosf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
+		front.v[1] = sinf(pitch * (float)M_PI / 180.0f);
+		front.v[2] = sinf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
+		camera.target = camera.position + front.normalize();
+
 		
+		// Debug output camera info
+		/*std::stringstream mat;
+		mat << "Cam Matrix:\n";
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				mat << meshBuffer.VP.m[i][j] << " ";
+			}
+			mat << "\n";
+		}
+		DebugPrint(mat.str());
+		std::stringstream cam;
+		cam << "Camera Position: " << camera.position.v[0] << ", " << camera.position.v[1] << ", " << camera.position.v[2] << "\n";
+		cam << "Camera Forward: " << camera.getForwardVector().v[0] << ", " << camera.getForwardVector().v[1] << ", " << camera.getForwardVector().v[2] << "\n";
+		cam << "Camera Right: " << camera.getRightVector().v[0] << ", " << camera.getRightVector().v[1] << ", " << camera.getRightVector().v[2] << "\n";
+		cam << "Camera Up: " << camera.up.v[0] << ", " << camera.up.v[1] << ", " << camera.up.v[2] << "\n";
+		DebugPrint(cam.str());*/
+
 		// rotate cube over time
 		meshBuffer.W = Mat4().RotateY(time * 50.0f).Transpose();
+		meshBuffer.VP = camera.getViewProjectionMatrix().Transpose();
 
 		// update constant buffer
 		shader.vsConstantBuffers[0].update("W", &meshBuffer.W);
