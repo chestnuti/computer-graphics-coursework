@@ -14,7 +14,7 @@ public:
 	float clipNear;
 	float clipFar;
 
-	Camera() : position(0.0f, 3.0f, 3.0f), target(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), fov(90.0f), clipNear(0.1f), clipFar(100.0f) {
+	Camera() : position(0.0f, 3.0f, 3.0f), target(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), fov(90.0f), clipNear(0.01f), clipFar(100.0f) {
 	}
 
 	Mat4 getLookatMatrix()
@@ -55,35 +55,8 @@ public:
 		projectionMatrix.m[2][2] = clipFar / (clipFar - clipNear);
 		projectionMatrix.m[2][3] = (-clipFar * clipNear) / (clipFar - clipNear);
 		projectionMatrix.m[3][2] = 1.0f;
+		projectionMatrix.m[3][3] = 0.0f;
 		return projectionMatrix * getLookatMatrix();
-	}
-
-	Vec4 getViewProjectionVector(Vec4 projection)
-	{
-		Vec4 transformed = projection.transform(getLookatMatrix());
-		//Perspective projection
-		float aspectRatio = static_cast<float>(ScreenWidth / ScreenHeight); //window size
-		float fovRad = 1.0f / tanf((fov * 0.5f) * (float)M_PI / 180.0f);
-		Mat4 projectionMatrix = Mat4()._Identity();
-		projectionMatrix.m[0][0] = fovRad / aspectRatio;
-		projectionMatrix.m[1][1] = fovRad;
-		projectionMatrix.m[2][2] = clipFar / (clipFar - clipNear);
-		projectionMatrix.m[2][3] = (-clipFar * clipNear) / (clipFar - clipNear);
-		projectionMatrix.m[3][2] = 1.0f;
-		Vec4 projected = transformed.transform(projectionMatrix);
-		//Normalize to camera space
-		projected.v[0] /= projected.v[3];
-		projected.v[1] /= projected.v[3];
-		projected.v[2] /= projected.v[3];
-
-		/*Vec4 distanceVec = projection - position;
-		float distance = distanceVec.getLength();
-		if (outcoming.normalize().Dot(distanceVec.normalize()) <= 0 || distance < clipNear || distance > clipFar)
-			projected.v[3] = -1.0f; //not visible
-		else
-			projected.v[3] = remap(distance, clipNear, clipFar, 0.0f, 255.0f); //visible with depth info*/
-
-		return projected;
 	}
 
 	Vec3 getForwardVector()
