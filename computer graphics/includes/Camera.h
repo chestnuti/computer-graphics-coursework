@@ -47,10 +47,10 @@ public:
 
 	Mat4 getViewProjectionMatrix()
 	{
-		float aspectRatio = ScreenHeight / ScreenWidth; //window size
+		float aspectRatio = ScreenWidth / ScreenHeight; //window size
 		float fovRad = 1.0f / tanf((fov * 0.5f) * (float)M_PI / 180.0f);
 		Mat4 projectionMatrix = Mat4()._Identity();
-		projectionMatrix.m[0][0] = aspectRatio * fovRad;
+		projectionMatrix.m[0][0] = fovRad / aspectRatio;
 		projectionMatrix.m[1][1] = fovRad;
 		projectionMatrix.m[2][2] = clipFar / (clipFar - clipNear);
 		projectionMatrix.m[2][3] = (-clipFar * clipNear) / (clipFar - clipNear);
@@ -62,10 +62,10 @@ public:
 	{
 		Vec4 transformed = projection.transform(getLookatMatrix());
 		//Perspective projection
-		float aspectRatio = static_cast<float>(ScreenHeight / ScreenWidth); //window size
+		float aspectRatio = static_cast<float>(ScreenWidth / ScreenHeight); //window size
 		float fovRad = 1.0f / tanf((fov * 0.5f) * (float)M_PI / 180.0f);
 		Mat4 projectionMatrix = Mat4()._Identity();
-		projectionMatrix.m[0][0] = aspectRatio * fovRad;
+		projectionMatrix.m[0][0] = fovRad / aspectRatio;
 		projectionMatrix.m[1][1] = fovRad;
 		projectionMatrix.m[2][2] = clipFar / (clipFar - clipNear);
 		projectionMatrix.m[2][3] = (-clipFar * clipNear) / (clipFar - clipNear);

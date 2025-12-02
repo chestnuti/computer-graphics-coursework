@@ -53,7 +53,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Vec4 lights[4];
 	StaticMeshBuffer meshBuffer;
 	meshBuffer.W = Mat4()._Identity();
-	meshBuffer.VP = camera.getViewProjectionMatrix().Transpose();
+	meshBuffer.VP = camera.getViewProjectionMatrix();
 	
 
 	while (true) {
@@ -144,8 +144,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		DebugPrint(cam.str());*/
 
 		// rotate cube over time
-		meshBuffer.W = Mat4().RotateY(time * 50.0f).Transpose();
-		meshBuffer.VP = camera.getViewProjectionMatrix().Transpose();
+		meshBuffer.W = Mat4().RotateY(time * 50.0f);
+		meshBuffer.VP = camera.getViewProjectionMatrix();
 
 		// update constant buffer
 		shader.vsConstantBuffers[0].update("W", &meshBuffer.W);
