@@ -3,6 +3,7 @@
 #include "Vector.h"
 #include "Operators.h"
 #include "Core.h"
+#include "GEMLoader.h"
 
 
 
@@ -351,5 +352,35 @@ public:
 		indices.push_back(20); indices.push_back(22); indices.push_back(23);
 
 		vb.init(core, vertices, indices);
+	}
+};
+
+
+
+class MeshLoader {
+public:
+	std::vector<Mesh> meshes;
+
+	void loadGEM(Core* core, const char* filename) {
+		GEMLoader::GEMModelLoader loader;
+		std::vector<GEMLoader::GEMMesh> gemmeshes;
+		loader.load(filename, gemmeshes);
+		for (int i = 0; i < gemmeshes.size(); i++) {
+			Mesh mesh;
+			std::vector<STATIC_VERTEX> vertices;
+			for (int j = 0; j < gemmeshes[i].verticesStatic.size(); j++) {
+				STATIC_VERTEX v;
+				memcpy(&v, &gemmeshes[i].verticesStatic[j], sizeof(STATIC_VERTEX));
+				vertices.push_back(v);
+			}
+			mesh.init(core, vertices, gemmeshes[i].indices);
+			meshes.push_back(mesh);
+		}
+	}
+
+	void draw(Core* core) {
+		for (int i = 0; i < meshes.size(); i++) {
+			meshes[i].draw(core);
+		}
 	}
 };

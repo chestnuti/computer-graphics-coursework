@@ -1,5 +1,6 @@
 #pragma once
 #include "Vector.h"
+#include "Window.h"
 
 #define ScreenWidth 1920.0f
 #define ScreenHeight 1080.0f
@@ -68,6 +69,57 @@ public:
 	{
 		Vec3 outcoming = getForwardVector();
 		return up.cross(outcoming).normalize();
+	}
+
+	void control(Window* win, float dt) {
+		static float speed = 10.0f;
+		if (win->keys['W']) position += getForwardVector() * dt * speed;
+		if (win->keys['S']) position -= getForwardVector() * dt * speed;
+		if (win->keys['A']) position -= getRightVector() * dt * speed;
+		if (win->keys['D']) position += getRightVector() * dt * speed;
+		if (win->keys['Q']) position -= up * dt * speed;
+		if (win->keys['E']) position += up * dt * speed;
+		// mouse look
+		POINT mousePos;
+		GetCursorPos(&mousePos);
+		ScreenToClient(win->hwnd, &mousePos);
+		static bool firstMouse = true;
+		if (win->mouseButtons[0])
+		{
+			firstMouse = false;
+		}
+		else
+		{
+			firstMouse = true;
+		}
+		static int lastX = win->width / 2;
+		static int lastY = win->height / 2;
+		if (firstMouse)
+		{
+			lastX = mousePos.x;
+			lastY = mousePos.y;
+			firstMouse = false;
+		}
+		int xoffset = mousePos.x - lastX;
+		int yoffset = lastY - mousePos.y;
+		lastX = mousePos.x;
+		lastY = mousePos.y;
+		float sensitivity = 0.1f;
+		xoffset = static_cast<int>(xoffset * sensitivity);
+		yoffset = static_cast<int>(yoffset * sensitivity);
+		static float yaw = -90.0f;
+		static float pitch = 0.0f;
+		yaw += static_cast<float>(xoffset);
+		pitch += static_cast<float>(yoffset);
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+		Vec3 front;
+		front.v[0] = cosf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
+		front.v[1] = sinf(pitch * (float)M_PI / 180.0f);
+		front.v[2] = sinf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
+		target = position + front.normalize();
 	}
 
 };

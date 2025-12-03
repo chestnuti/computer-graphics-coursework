@@ -6,7 +6,6 @@
 #include "./includes/Matrix.h"
 #include "./includes/Camera.h"
 #include "./includes/GamesEngineeringBase.h"
-
 #include "./includes/GEMLoader.h"
 
 
@@ -28,8 +27,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	core.init(win.hwnd, win.width, win.height);
 	GamesEngineeringBase::Timer timer;
 
-	Cube sst;
-	sst.init(&core);
+	MeshLoader meshLoader;
+	meshLoader.loadGEM(&core, "Models/TreeModels/bamboo.gem");
+
+	//Cube sst;
+	//sst.init(&core);
 
 	// Compile shaders
 	Shader shader;
@@ -37,7 +39,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	
 	// Create PSO manager
 	PSOManager psos;
-	psos.createPSO(&core, "sst", shader.vertexShader, shader.pixelShader, sst.vb.inputLayoutDesc);
+	psos.createPSO(&core, "model", shader.vertexShader, shader.pixelShader, meshLoader.meshes[0].inputLayoutDesc);
 
 	// Reflect shaders to get constant buffer info
 	shader.reflect(&core, shader.vertexShader, shader.vsConstantBuffers);
@@ -45,14 +47,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	
 	// Create camera
 	Camera camera;
-
-	int width = win.width;
-	int height = win.height;
 	
 	float time = 0.0f;
 	Vec4 lights[4];
 	StaticMeshBuffer meshBuffer;
-	meshBuffer.W = Mat4()._Identity();
+	meshBuffer.W = Mat4()._Identity().Scale(0.01f, 0.01f, 0.01f);
 	meshBuffer.VP = camera.getViewProjectionMatrix();
 	
 
@@ -65,92 +64,17 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		// make lights orbit around center of screen
 		float dt = timer.dt();
 		time += dt;
-		/*for (int i = 0; i < 4; i++) {
-			float angle = time + (i * M_PI / 2.0f);
-			lights[i] = Vec4(width / 2.0f + (cosf(angle) * (width * 0.3f)),
-				height / 2.0f + (sinf(angle) * (height * 0.3f)),
-				0, 0);
-		};
-		// update constant buffer
-		shader.psConstantBuffers[0].update("time", &time);
-		shader.psConstantBuffers[0].update("lights", &lights);*/
 
 		// camera controls
-		static float speed = 10.0f;
-		if (win.keys['W']) camera.position += camera.getForwardVector() * dt * speed;
-		if (win.keys['S']) camera.position -= camera.getForwardVector() * dt * speed;
-		if (win.keys['A']) camera.position -= camera.getRightVector() * dt * speed;
-		if (win.keys['D']) camera.position += camera.getRightVector() * dt * speed;
-		if (win.keys['Q']) camera.position -= camera.up * dt * speed;
-		if (win.keys['E']) camera.position += camera.up * dt * speed;
-		// mouse look
-		POINT mousePos;
-		GetCursorPos(&mousePos);
-		ScreenToClient(win.hwnd, &mousePos);
-		static bool firstMouse = true;
-		if (win.mouseButtons[0])
-		{
-			firstMouse = false;
-		}
-		else
-		{
-			firstMouse = true;
-		}
-		static int lastX = win.width / 2;
-		static int lastY = win.height / 2;
-		if (firstMouse)
-		{
-			lastX = mousePos.x;
-			lastY = mousePos.y;
-			firstMouse = false;
-		}
-		int xoffset = mousePos.x - lastX;
-		int yoffset = lastY - mousePos.y;
-		lastX = mousePos.x;
-		lastY = mousePos.y;
-		float sensitivity = 0.1f;
-		xoffset = static_cast<int>(xoffset * sensitivity);
-		yoffset = static_cast<int>(yoffset * sensitivity);
-		static float yaw = -90.0f;
-		static float pitch = 0.0f;
-		yaw += static_cast<float>(xoffset);
-		pitch += static_cast<float>(yoffset);
-		if (pitch > 89.0f)
-			pitch = 89.0f;
-		if (pitch < -89.0f)
-			pitch = -89.0f;
-		Vec3 front;
-		front.v[0] = cosf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
-		front.v[1] = sinf(pitch * (float)M_PI / 180.0f);
-		front.v[2] = sinf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
-		camera.target = camera.position + front.normalize();
-
-		
-		// Debug output camera info
-		/*std::stringstream mat;
-		mat << "Cam Matrix:\n";
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				mat << meshBuffer.VP.m[i][j] << " ";
-			}
-			mat << "\n";
-		}
-		DebugPrint(mat.str());
-		std::stringstream cam;
-		cam << "Camera Position: " << camera.position.v[0] << ", " << camera.position.v[1] << ", " << camera.position.v[2] << "\n";
-		cam << "Camera Forward: " << camera.getForwardVector().v[0] << ", " << camera.getForwardVector().v[1] << ", " << camera.getForwardVector().v[2] << "\n";
-		cam << "Camera Right: " << camera.getRightVector().v[0] << ", " << camera.getRightVector().v[1] << ", " << camera.getRightVector().v[2] << "\n";
-		cam << "Camera Up: " << camera.up.v[0] << ", " << camera.up.v[1] << ", " << camera.up.v[2] << "\n";
-		DebugPrint(cam.str());*/
+		camera.control(&win, dt);
 
 		// rotate cube over time
-		meshBuffer.W = Mat4().RotateY(time * 50.0f);
+		meshBuffer.W = Mat4().RotateY(dt * 50.0f) * meshBuffer.W;
 		meshBuffer.VP = camera.getViewProjectionMatrix();
 
 		// update constant buffer
 		shader.vsConstantBuffers[0].update("W", &meshBuffer.W);
 		shader.vsConstantBuffers[0].update("VP", &meshBuffer.VP);
-
 
 		core.beginRenderPass();
 
@@ -158,10 +82,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		shader.apply(&core);
 
 		// bind pso
-		psos.bind(&core, "sst");
+		psos.bind(&core, "model");
 
 		// draw triangle
-		sst.vb.draw(&core);
+		meshLoader.draw(&core);
 
 		core.finishFrame();
 	}
