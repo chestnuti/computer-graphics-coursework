@@ -6,6 +6,12 @@
 #include "Buffer.h"
 
 
+enum ShaderType {
+	VERTEX_SHADER,
+	PIXEL_SHADER
+};
+
+
 class Shader {
 public:
 	// Shaders
@@ -85,7 +91,6 @@ public:
 		reflect(core, pixelShader, psConstantBuffers);
 	}
 
-
 	void apply(Core* core) {
 		// bind VS constant buffers
 		for (int i = 0; i < vsConstantBuffers.size(); i++) 
@@ -100,6 +105,16 @@ public:
 		{
 			core->getCommandList()->SetGraphicsRootConstantBufferView(psStartIndex + i, psConstantBuffers[i].getGPUAddress());
 			psConstantBuffers[i].next();
+		}
+	}
+
+	void updateConstantBuffer(const std::string& cbName, std::string varName, void* data, enum ShaderType type) {
+		std::vector<ConstantBuffer>& buffers = (type == VERTEX_SHADER) ? vsConstantBuffers : psConstantBuffers;
+		for (auto& cb : buffers) {
+			if (cb.name == cbName) {
+				cb.update(varName, data);
+				return;
+			}
 		}
 	}
 
@@ -219,13 +234,18 @@ public:
 			if (cb.name == cbName) {
 				cb.update(cbName, data);
 			}
-			// Update PS constant buffers
-			for (auto& cb : shader->psConstantBuffers) {
-				if (cb.name == cbName) {
-					cb.update(cbName, data);
-					return;
-				}
+		}
+		// Update PS constant buffers
+		for (auto& cb : shader->psConstantBuffers) {
+			if (cb.name == cbName) {
+				cb.update(cbName, data);
+				return;
 			}
 		}
+	}
+
+	void updateConstantBuffer(const std::string& shaderName, const std::string& cbName, std::string varName, void* data, enum ShaderType type) {
+		Shader* shader = shaders[shaderName];
+		shader->updateConstantBuffer(cbName, varName, data, type);
 	}
 };

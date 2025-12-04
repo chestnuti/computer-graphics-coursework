@@ -14,10 +14,6 @@ struct alignas(16) StaticMeshBuffer {
 	Mat4 VP;
 };
 
-/*void DebugPrint(const std::string& message) {
-	OutputDebugStringA((message + "\n").c_str());
-}*/
-
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	// Create window and initialize core
 	Window win;
@@ -66,15 +62,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		camera.control(&win, dt);
 
 		// rotate cube over time
-		//meshBuffer.W = Mat4().RotateY(dt * 50.0f) * meshBuffer.W;
+		meshBuffer.W = Mat4().RotateY(dt * 50.0f) * meshBuffer.W;
 		meshBuffer.VP = camera.getViewProjectionMatrix();
 
 		// update constant buffer
-		shaderManager.shaders["basic"]->vsConstantBuffers[0].update("W", &meshBuffer.W);
-		shaderManager.shaders["basic"]->vsConstantBuffers[0].update("VP", &meshBuffer.VP);
+		shaderManager.updateConstantBuffer("basic", "animatedMeshBuffer", "W", &meshBuffer.W, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("basic", "animatedMeshBuffer", "VP", &meshBuffer.VP, VERTEX_SHADER);
 		//update animation
 		instance.update("Run", dt);
-		shaderManager.shaders["basic"]->vsConstantBuffers[0].update("bones", instance.matrices);
+		shaderManager.updateConstantBuffer("basic", "animatedMeshBuffer", "bones", instance.matrices, VERTEX_SHADER);
 
 		core.beginRenderPass();
 

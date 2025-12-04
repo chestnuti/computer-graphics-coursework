@@ -198,6 +198,7 @@ public:
 	unsigned int numMeshIndices;
 
 	Mat4 worldMatrix;
+	std::string psoNames;
 
 	void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices, unsigned int* indices, int numIndices)
 	{
@@ -395,7 +396,6 @@ public:
 class MeshLoader {
 public:
 	std::vector<Mesh> meshes;
-	std::vector<std::string> psoNames;
 	Animation animation;
 
 	PSOManager* psoManager;
@@ -421,12 +421,12 @@ public:
 					vertices.push_back(v);
 				}
 				mesh.init(core, vertices, gemmeshes[i].indices);
-				meshes.push_back(mesh);
 				// Assign PSO name based on mesh index
 				if (i < numPSOs)
-					psoNames.push_back(psonames[i]);
+					mesh.psoNames = psonames[i];
 				else
-					psoNames.push_back(psonames[numPSOs - 1]);
+					mesh.psoNames = psonames[numPSOs - 1];
+				meshes.push_back(mesh);
 			}
 			// Load Bones for Animation
 			for (int i = 0; i < gemanimation.bones.size(); i++)
@@ -475,12 +475,12 @@ public:
 					vertices.push_back(v);
 				}
 				mesh.init(core, vertices, gemmeshes[i].indices);
-				meshes.push_back(mesh);
 				// Assign PSO name based on mesh index
 				if (i < numPSOs)
-					psoNames.push_back(psonames[i]);
+					mesh.psoNames = psonames[i];
 				else
-					psoNames.push_back(psonames[numPSOs - 1]);
+					mesh.psoNames = psonames[numPSOs - 1];
+				meshes.push_back(mesh);
 			}
 		}
 	}
@@ -493,7 +493,7 @@ public:
 
 	void draw(Core* core) {
 		for (int i = 0; i < meshes.size(); i++) {
-			psoManager->bind(core, psoNames[i]);
+			psoManager->bind(core, meshes[i].psoNames);
 			meshes[i].draw(core);
 		}
 	}
