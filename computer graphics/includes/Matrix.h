@@ -4,8 +4,8 @@
 #include <algorithm>
 #include <iostream>
 #include <math.h>
-using namespace std;
 
+class Vec4;
 
 class Mat4 {
 public:

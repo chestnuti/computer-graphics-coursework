@@ -48,6 +48,9 @@
     <ClInclude Include="includes\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="includes\Animation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

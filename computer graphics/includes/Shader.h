@@ -1,3 +1,4 @@
+#pragma once
 #include "Core.h"
 #include <unordered_map>
 #include <fstream>
@@ -77,6 +78,11 @@ public:
 			toBuffer.push_back(buffer);
 		}
 		reflection->Release();
+	}
+
+	void reflect(Core* core) {
+		reflect(core, vertexShader, vsConstantBuffers);
+		reflect(core, pixelShader, psConstantBuffers);
 	}
 
 
@@ -168,6 +174,10 @@ public:
 		psos.insert({ name, pso });
 	}
 
+	void createPSO(Core* core, std::string name, Shader* shader, D3D12_INPUT_LAYOUT_DESC layout) {
+		createPSO(core, name, shader->vertexShader, shader->pixelShader, layout);
+	}
+
 	void bind(Core* core, std::string name) {
 		core->getCommandList()->SetPipelineState(psos[name]);
 	}
@@ -187,9 +197,35 @@ public:
 		}
 		Shader* shader = new Shader();
 		shader->init(vertexShaderFile, pixelShaderFile);
-		shader->reflect(core, shader->vertexShader, shader->vsConstantBuffers);
-		shader->reflect(core, shader->pixelShader, shader->psConstantBuffers);
+		shader->reflect(core);
 		shaders.insert({ name, shader });
 		return shader;
+	}
+
+	void applyShader(Core* core, std::string name) {
+		shaders[name]->apply(core);
+	}
+
+	void applyAll(Core* core) {
+		for (auto& pair : shaders) {
+			pair.second->apply(core);
+		}
+	}
+
+	void updateConstantBuffers(std::string shaderName, const std::string& cbName, void* data) {
+		Shader* shader = shaders[shaderName];
+		// Update VS constant buffers
+		for (auto& cb : shader->vsConstantBuffers) {
+			if (cb.name == cbName) {
+				cb.update(cbName, data);
+			}
+			// Update PS constant buffers
+			for (auto& cb : shader->psConstantBuffers) {
+				if (cb.name == cbName) {
+					cb.update(cbName, data);
+					return;
+				}
+			}
+		}
 	}
 };

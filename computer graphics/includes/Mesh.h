@@ -4,7 +4,8 @@
 #include "Operators.h"
 #include "Core.h"
 #include "GEMLoader.h"
-
+#include "Shader.h"
+#include "Animation.h"
 
 
 class Triangle {
@@ -118,8 +119,17 @@ struct STATIC_VERTEX
 	Vec3 pos;
 	Vec3 normal;
 	Vec3 tangent;
-	float tu;
-	float tv;
+	float uv[2];
+};
+
+struct ANIMATED_VERTEX
+{
+	Vec3 pos;
+	Vec3 normal;
+	Vec3 tangent;
+	float uv[2];
+	unsigned int bonesIDs[4];
+	float boneWeights[4];
 };
 
 STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
@@ -128,26 +138,46 @@ STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
 	v.pos = p;
 	v.normal = n;
 	v.tangent = Vec3(0, 0, 0); // For now
-	v.tu = tu;
-	v.tv = tv;
+	v.uv[0] = tu;
+	v.uv[1] = tv;
 	return v;
 }
 
 
 
-class VertexLayoutCache
+
+class LayoutCache
 {
 public:
+	static const D3D12_INPUT_LAYOUT_DESC& getAnimatedLayout() {
+		static const D3D12_INPUT_ELEMENT_DESC inputLayoutAnimated[] = {
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "BONEIDS", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "BONEWEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		};
+		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutAnimated, 6 };
+		return desc;
+	}
+
 	static const D3D12_INPUT_LAYOUT_DESC& getStaticLayout() {
 		static const D3D12_INPUT_ELEMENT_DESC inputLayoutStatic[] = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutStatic, 4 };
 		return desc;
@@ -167,10 +197,11 @@ public:
 
 	unsigned int numMeshIndices;
 
-	Mesh() : vertexBuffer(nullptr), vbView() {}
+	Mat4 worldMatrix;
 
 	void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices, unsigned int* indices, int numIndices)
 	{
+		worldMatrix = Mat4()._Identity();
 		// Create an upload heap to upload the vertex buffer data
 		D3D12_HEAP_PROPERTIES heapprops = {};
 		heapprops.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -224,9 +255,14 @@ public:
 	void init(Core* core, std::vector<STATIC_VERTEX> vertices, std::vector<unsigned int> indices)
 	{
 		init(core, &vertices[0], sizeof(STATIC_VERTEX), vertices.size(), &indices[0], indices.size());
-		inputLayoutDesc = VertexLayoutCache::getStaticLayout();
+		inputLayoutDesc = LayoutCache::getStaticLayout();
 	}
 
+	void init(Core* core, std::vector<ANIMATED_VERTEX> vertices, std::vector<unsigned int> indices)
+	{
+		init(core, &vertices[0], sizeof(ANIMATED_VERTEX), vertices.size(), &indices[0], indices.size());
+		inputLayoutDesc = LayoutCache::getAnimatedLayout();
+	}
 
 	void draw(Core* core)
 	{
@@ -234,7 +270,6 @@ public:
 		core->getCommandList()->IASetVertexBuffers(0, 1, &vbView);
 		core->getCommandList()->IASetIndexBuffer(&ibView);
 		core->getCommandList()->DrawIndexedInstanced(numMeshIndices, 1, 0, 0, 0);
-
 	}
 };
 
@@ -244,7 +279,7 @@ class ScreenSpaceTriangle {
 public:
 	// Define triangle vertices
 	PRIM_VERTEX vertices[3];
-	Mesh vb;
+	Mesh mesh;
 
 	ScreenSpaceTriangle() {
 		vertices[0].position = Vec3(0, 1.0f, 0);
@@ -263,12 +298,12 @@ public:
 			v.pos = vertices[i].position;
 			v.normal = Vec3(0, 0, -1);
 			v.tangent = Vec3(1, 0, 0);
-			v.tu = 0.0f;
-			v.tv = 0.0f;
+			v.uv[0] = 0.0f;
+			v.uv[1] = 0.0f;
 			verts.push_back(v);
 		}
 		std::vector<unsigned int> indices = { 0, 1, 2 };
-		vb.init(core, verts, indices);
+		mesh.init(core, verts, indices);
 	}
 };
 
@@ -276,7 +311,7 @@ class Plane {
 public:
 	std::vector<STATIC_VERTEX> vertices;
 	std::vector<unsigned int> indices;
-	Mesh vb;
+	Mesh mesh;
 	
 	void init(Core* core) {
 		vertices.push_back(addVertex(Vec3(-15, 0, -15), Vec3(0, 1, 0), 0, 0));
@@ -286,7 +321,7 @@ public:
 		
 		indices.push_back(2); indices.push_back(1); indices.push_back(0);
 		indices.push_back(1); indices.push_back(2); indices.push_back(3);
-		vb.init(core, vertices, indices);
+		mesh.init(core, vertices, indices);
 	}
 };
 
@@ -294,7 +329,7 @@ class Cube {
 public:
 	std::vector<STATIC_VERTEX> vertices;
 	std::vector<unsigned int> indices;
-	Mesh vb;
+	Mesh mesh;
 
 	Vec3 p0 = Vec3(-1.0f, -1.0f, -1.0f);
 	Vec3 p1 = Vec3(1.0f, -1.0f, -1.0f);
@@ -351,7 +386,7 @@ public:
 		indices.push_back(20); indices.push_back(21); indices.push_back(22);
 		indices.push_back(20); indices.push_back(22); indices.push_back(23);
 
-		vb.init(core, vertices, indices);
+		mesh.init(core, vertices, indices);
 	}
 };
 
@@ -360,26 +395,105 @@ public:
 class MeshLoader {
 public:
 	std::vector<Mesh> meshes;
+	std::vector<std::string> psoNames;
+	Animation animation;
 
-	void loadGEM(Core* core, const char* filename) {
+	PSOManager* psoManager;
+
+	MeshLoader(PSOManager* psoMgr) : psoManager(psoMgr) {}
+
+	void loadGEM(Core* core, const char* filename, std::vector<std::string> psonames) {
+		// Load GEM file
+		int numPSOs = psonames.size();
 		GEMLoader::GEMModelLoader loader;
 		std::vector<GEMLoader::GEMMesh> gemmeshes;
-		loader.load(filename, gemmeshes);
-		for (int i = 0; i < gemmeshes.size(); i++) {
-			Mesh mesh;
-			std::vector<STATIC_VERTEX> vertices;
-			for (int j = 0; j < gemmeshes[i].verticesStatic.size(); j++) {
-				STATIC_VERTEX v;
-				memcpy(&v, &gemmeshes[i].verticesStatic[j], sizeof(STATIC_VERTEX));
-				vertices.push_back(v);
+		GEMLoader::GEMAnimation gemanimation;
+		loader.load(filename, gemmeshes, gemanimation);
+		// check if have animation
+		if (gemanimation.bones.size() > 0) {
+			// Load Meshes
+			for (int i = 0; i < gemmeshes.size(); i++) {
+				Mesh mesh;
+				std::vector<ANIMATED_VERTEX> vertices;
+				for (int j = 0; j < gemmeshes[i].verticesAnimated.size(); j++) {
+					ANIMATED_VERTEX v;
+					memcpy(&v, &gemmeshes[i].verticesAnimated[j], sizeof(ANIMATED_VERTEX));
+					vertices.push_back(v);
+				}
+				mesh.init(core, vertices, gemmeshes[i].indices);
+				meshes.push_back(mesh);
+				// Assign PSO name based on mesh index
+				if (i < numPSOs)
+					psoNames.push_back(psonames[i]);
+				else
+					psoNames.push_back(psonames[numPSOs - 1]);
 			}
-			mesh.init(core, vertices, gemmeshes[i].indices);
-			meshes.push_back(mesh);
+			// Load Bones for Animation
+			for (int i = 0; i < gemanimation.bones.size(); i++)
+			{
+				Bone bone;
+				bone.name = gemanimation.bones[i].name;
+				memcpy(&bone.offset, &gemanimation.bones[i].offset, 16 * sizeof(float));
+				bone.parentIndex = gemanimation.bones[i].parentIndex;
+				animation.skeleton.bones.push_back(bone);
+			}
+			// Load Animations and copy data
+			for (int i = 0; i < gemanimation.animations.size(); i++)
+			{
+				std::string name = gemanimation.animations[i].name;
+				AnimationSequence aseq;
+				aseq.ticksPerSecond = gemanimation.animations[i].ticksPerSecond;
+				for (int n = 0; n < gemanimation.animations[i].frames.size(); n++)
+				{
+					AnimationFrame frame;
+					for (int index = 0; index < gemanimation.animations[i].frames[n].positions.size(); index++)
+					{
+						Vec3 p;
+						Vec4 q;
+						Vec3 s;
+						memcpy(&p, &gemanimation.animations[i].frames[n].positions[index], sizeof(Vec3));
+						frame.positions.push_back(p);
+						memcpy(&q, &gemanimation.animations[i].frames[n].rotations[index], sizeof(Vec4));
+						frame.rotations.push_back(q);
+						memcpy(&s, &gemanimation.animations[i].frames[n].scales[index], sizeof(Vec3));
+						frame.scales.push_back(s);
+					}
+					aseq.frames.push_back(frame);
+				}
+				animation.animations.insert({ name, aseq });
+			}
 		}
+		// No animation
+		else {
+			// Load Meshes
+			for (int i = 0; i < gemmeshes.size(); i++) {
+				Mesh mesh;
+				std::vector<STATIC_VERTEX> vertices;
+				for (int j = 0; j < gemmeshes[i].verticesStatic.size(); j++) {
+					STATIC_VERTEX v;
+					memcpy(&v, &gemmeshes[i].verticesStatic[j], sizeof(STATIC_VERTEX));
+					vertices.push_back(v);
+				}
+				mesh.init(core, vertices, gemmeshes[i].indices);
+				meshes.push_back(mesh);
+				// Assign PSO name based on mesh index
+				if (i < numPSOs)
+					psoNames.push_back(psonames[i]);
+				else
+					psoNames.push_back(psonames[numPSOs - 1]);
+			}
+		}
+	}
+
+	void loadGEM(Core* core, const char* filename, std::string psoname) {
+		std::vector<std::string> names;
+		names.push_back(psoname);
+		loadGEM(core, filename, names);
 	}
 
 	void draw(Core* core) {
 		for (int i = 0; i < meshes.size(); i++) {
+			psoManager->bind(core, psoNames[i]);
 			meshes[i].draw(core);
 		}
 	}

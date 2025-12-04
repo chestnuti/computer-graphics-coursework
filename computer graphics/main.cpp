@@ -14,36 +14,33 @@ struct alignas(16) StaticMeshBuffer {
 	Mat4 VP;
 };
 
-void DebugPrint(const std::string& message) {
+/*void DebugPrint(const std::string& message) {
 	OutputDebugStringA((message + "\n").c_str());
-}
+}*/
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	// Create window and initialize core
 	Window win;
-	win.create(1920, 1080, "My Window");
+	win.create(ScreenWidth, ScreenHeight, "My Window");
 	// Initialize core
 	Core core;
 	core.init(win.hwnd, win.width, win.height);
 	GamesEngineeringBase::Timer timer;
 
-	MeshLoader meshLoader;
-	meshLoader.loadGEM(&core, "Models/TreeModels/bamboo.gem");
-
-	//Cube sst;
-	//sst.init(&core);
-
-	// Compile shaders
-	Shader shader;
-	shader.init("./hlsl/Shader4.hlsl", "./hlsl/Shader4.hlsl");
+	ShaderManager shaderManager;
+	shaderManager.createShader(&core, "basic", "./hlsl/AnimtedVS.hlsl", "./hlsl/BasicPS.hlsl");
 	
 	// Create PSO manager
 	PSOManager psos;
-	psos.createPSO(&core, "model", shader.vertexShader, shader.pixelShader, meshLoader.meshes[0].inputLayoutDesc);
+	psos.createPSO(&core, "models", shaderManager.shaders["basic"], LayoutCache::getAnimatedLayout());
 
-	// Reflect shaders to get constant buffer info
-	shader.reflect(&core, shader.vertexShader, shader.vsConstantBuffers);
-	shader.reflect(&core, shader.pixelShader, shader.psConstantBuffers);
+	// Load mesh
+	MeshLoader meshLoader = MeshLoader(&psos);
+	meshLoader.loadGEM(&core, "Models/Trex/TRex.gem", "models");
+
+	// Create animation instance
+	AnimationInstance instance;
+	instance.animation = &meshLoader.animation;
 	
 	// Create camera
 	Camera camera;
@@ -51,7 +48,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	float time = 0.0f;
 	Vec4 lights[4];
 	StaticMeshBuffer meshBuffer;
-	meshBuffer.W = Mat4()._Identity().Scale(0.01f, 0.01f, 0.01f);
+	meshBuffer.W = Mat4()._Identity();
 	meshBuffer.VP = camera.getViewProjectionMatrix();
 	
 
@@ -69,23 +66,25 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		camera.control(&win, dt);
 
 		// rotate cube over time
-		meshBuffer.W = Mat4().RotateY(dt * 50.0f) * meshBuffer.W;
+		//meshBuffer.W = Mat4().RotateY(dt * 50.0f) * meshBuffer.W;
 		meshBuffer.VP = camera.getViewProjectionMatrix();
 
 		// update constant buffer
-		shader.vsConstantBuffers[0].update("W", &meshBuffer.W);
-		shader.vsConstantBuffers[0].update("VP", &meshBuffer.VP);
+		shaderManager.shaders["basic"]->vsConstantBuffers[0].update("W", &meshBuffer.W);
+		shaderManager.shaders["basic"]->vsConstantBuffers[0].update("VP", &meshBuffer.VP);
+		//update animation
+		instance.update("Run", dt);
+		shaderManager.shaders["basic"]->vsConstantBuffers[0].update("bones", instance.matrices);
 
 		core.beginRenderPass();
 
 		// apply shader
-		shader.apply(&core);
-
-		// bind pso
-		psos.bind(&core, "model");
-
+		shaderManager.applyAll(&core);
+		
 		// draw triangle
 		meshLoader.draw(&core);
+		
+
 
 		core.finishFrame();
 	}
