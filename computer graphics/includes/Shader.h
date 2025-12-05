@@ -127,6 +127,7 @@ public:
 class PSOManager {
 public:
 	std::unordered_map<std::string, ID3D12PipelineState*> psos;
+	std::unordered_map<std::string, ID3D12RootSignature*> rootSignatures;
 
 	void createPSO(Core* core, std::string name, ID3DBlob* vs, ID3DBlob* ps, D3D12_INPUT_LAYOUT_DESC layout)
 	{
@@ -134,12 +135,14 @@ public:
 		{
 			return;
 		}
-		createRootSignature(core, psos.size());
+		
+		// Create a unique root signature for this PSO
+		ID3D12RootSignature* rootSig = createRootSignature(core, psos.size());
 
 		// Create graphics pipeline state object (PSO)
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
 		desc.InputLayout = layout;
-		desc.pRootSignature = core->rootSignature;
+		desc.pRootSignature = rootSig;
 		desc.VS = { vs->GetBufferPointer(), vs->GetBufferSize() };
 		desc.PS = { ps->GetBufferPointer(), ps->GetBufferSize() };
 		// Rasterizer State
@@ -193,8 +196,9 @@ public:
 			// handle error
 			throw std::runtime_error("Failed to create pipeline state object, pso name: " + name);
 		}
-		// insert into map
+		// insert into maps
 		psos.insert({ name, pso });
+		rootSignatures.insert({ name, rootSig });
 	}
 
 	void createPSO(Core* core, std::string name, Shader* shader, D3D12_INPUT_LAYOUT_DESC layout) {
@@ -202,23 +206,25 @@ public:
 	}
 
 	void bind(Core* core, std::string name) {
+		// Set both root signature and PSO
+		core->getCommandList()->SetGraphicsRootSignature(rootSignatures[name]);
 		core->getCommandList()->SetPipelineState(psos[name]);
 	}
 
-	void createRootSignature(Core* core, int registerSlot) {
+	ID3D12RootSignature* createRootSignature(Core* core, int registerSlot) {
 		// Upload Root Signature
 		std::vector<D3D12_ROOT_PARAMETER> parameters;
 		// Register space for VS CBV
 		D3D12_ROOT_PARAMETER rootParameterCBVS;
 		rootParameterCBVS.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		rootParameterCBVS.Descriptor.ShaderRegister = registerSlot; // Register(bi)
+		rootParameterCBVS.Descriptor.ShaderRegister = 0; // Register(b0)
 		rootParameterCBVS.Descriptor.RegisterSpace = 0;
 		rootParameterCBVS.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 		parameters.push_back(rootParameterCBVS);
 		// Register space for PS CBV
 		D3D12_ROOT_PARAMETER rootParameterCBPS;
 		rootParameterCBPS.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		rootParameterCBPS.Descriptor.ShaderRegister = registerSlot; // Register(bi)
+		rootParameterCBPS.Descriptor.ShaderRegister = 0; // Register(b0)
 		rootParameterCBPS.Descriptor.RegisterSpace = 0;
 		rootParameterCBPS.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 		parameters.push_back(rootParameterCBPS);
@@ -257,8 +263,13 @@ public:
 		ID3DBlob* serialized;
 		ID3DBlob* error;
 		D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized, &error);
+		
+		ID3D12RootSignature* rootSig;
+		core->device->CreateRootSignature(0, serialized->GetBufferPointer(), serialized->GetBufferSize(), IID_PPV_ARGS(&rootSig));
 		core->device->CreateRootSignature(0, serialized->GetBufferPointer(), serialized->GetBufferSize(), IID_PPV_ARGS(&core->rootSignature));
 		serialized->Release();
+		
+		return rootSig;
 	}
 };
 

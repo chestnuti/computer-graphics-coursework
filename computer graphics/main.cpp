@@ -5,6 +5,7 @@
 #include "./includes/Shader.h"
 #include "./includes/Matrix.h"
 #include "./includes/Camera.h"
+#include "./includes/Image.h"
 #include "./includes/GamesEngineeringBase.h"
 #include "./includes/GEMLoader.h"
 
@@ -31,6 +32,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	PSOManager psos;
 	psos.createPSO(&core, "animatedPSO", shaderManager.shaders["animatedShader"], LayoutCache::getAnimatedLayout());
 	psos.createPSO(&core, "basicPSO", shaderManager.shaders["basicShader"], LayoutCache::getStaticLayout());
+
+	ImageLoader imageLoader = ImageLoader(&core);
+	imageLoader.loadImage("Trex", "Models/Trex/Textures/T-rex_Base_Color_ALB.png");
+	imageLoader.loadImage("RGBTest", "Models/Trex/Textures/Textures1_ALB.png");
+	imageLoader.uploadImages("Trex");
+	imageLoader.uploadImages("RGBTest");
 
 	// Load mesh
 	MeshLoader meshLoader = MeshLoader(&psos);
@@ -78,21 +85,23 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		// update constant buffer
 		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "W", &meshBuffer1.W, VERTEX_SHADER);
 		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "VP", &meshBuffer1.VP, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "A", &meshBuffer2.W, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "W", &meshBuffer2.W, VERTEX_SHADER);
 		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "VP", &meshBuffer1.VP, VERTEX_SHADER);
 
 		//update animation
 		instance.update("Run", dt);
 		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "bones", instance.matrices, VERTEX_SHADER);
-
+		
 		core.beginRenderPass();
 
 		// apply shader
+		imageLoader.applyImage("Trex");
 		shaderManager.applyShader(&core, "animatedShader");
 		// draw models
 		meshLoader.draw(&core);
 
 		// draw sphere
+		imageLoader.applyImage("RGBTest");
 		shaderManager.applyShader(&core, "basicShader");
 		psos.bind(&core, "basicPSO");
 		sphere.mesh.draw(&core);
