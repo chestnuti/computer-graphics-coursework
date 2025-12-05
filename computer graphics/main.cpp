@@ -24,15 +24,22 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	GamesEngineeringBase::Timer timer;
 
 	ShaderManager shaderManager;
-	shaderManager.createShader(&core, "basic", "./hlsl/AnimtedVS.hlsl", "./hlsl/BasicPS.hlsl");
+	shaderManager.createShader(&core, "animatedShader", "./hlsl/AnimatedVS.hlsl", "./hlsl/BasicPS.hlsl");
+	shaderManager.createShader(&core, "basicShader", "./hlsl/BasicVS.hlsl", "./hlsl/BasicPS.hlsl");
 	
 	// Create PSO manager
 	PSOManager psos;
-	psos.createPSO(&core, "models", shaderManager.shaders["basic"], LayoutCache::getAnimatedLayout());
+	psos.createPSO(&core, "animatedPSO", shaderManager.shaders["animatedShader"], LayoutCache::getAnimatedLayout());
+	psos.createPSO(&core, "basicPSO", shaderManager.shaders["basicShader"], LayoutCache::getStaticLayout());
 
 	// Load mesh
 	MeshLoader meshLoader = MeshLoader(&psos);
-	meshLoader.loadGEM(&core, "Models/Trex/TRex.gem", "models");
+	meshLoader.loadGEM(&core, "Models/Trex/TRex.gem", "animatedPSO");
+
+	Sphere sphere;
+	sphere.init(&core, 20, 20, 1.0f);
+	Cube cube;
+	cube.init(&core);
 
 	// Create animation instance
 	AnimationInstance instance;
@@ -43,9 +50,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	
 	float time = 0.0f;
 	Vec4 lights[4];
-	StaticMeshBuffer meshBuffer;
-	meshBuffer.W = Mat4()._Identity();
-	meshBuffer.VP = camera.getViewProjectionMatrix();
+	StaticMeshBuffer meshBuffer1;
+	meshBuffer1.W = Mat4()._Identity();
+	meshBuffer1.VP = camera.getViewProjectionMatrix();
+	StaticMeshBuffer meshBuffer2;
+	meshBuffer2.W = Mat4()._Identity();
+	meshBuffer2.VP = camera.getViewProjectionMatrix();
 	
 
 	while (true) {
@@ -62,26 +72,32 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		camera.control(&win, dt);
 
 		// rotate cube over time
-		meshBuffer.W = Mat4().RotateY(dt * 50.0f) * meshBuffer.W;
-		meshBuffer.VP = camera.getViewProjectionMatrix();
+		meshBuffer1.W = Mat4().RotateY(dt * 50.0f) * meshBuffer1.W;
+		meshBuffer1.VP = camera.getViewProjectionMatrix();
 
 		// update constant buffer
-		shaderManager.updateConstantBuffer("basic", "animatedMeshBuffer", "W", &meshBuffer.W, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("basic", "animatedMeshBuffer", "VP", &meshBuffer.VP, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "W", &meshBuffer1.W, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "VP", &meshBuffer1.VP, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "A", &meshBuffer2.W, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "VP", &meshBuffer1.VP, VERTEX_SHADER);
+
 		//update animation
 		instance.update("Run", dt);
-		shaderManager.updateConstantBuffer("basic", "animatedMeshBuffer", "bones", instance.matrices, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "bones", instance.matrices, VERTEX_SHADER);
 
 		core.beginRenderPass();
 
 		// apply shader
-		shaderManager.applyAll(&core);
-		
-		// draw triangle
+		shaderManager.applyShader(&core, "animatedShader");
+		// draw models
 		meshLoader.draw(&core);
+
+		// draw sphere
+		shaderManager.applyShader(&core, "basicShader");
+		psos.bind(&core, "basicPSO");
+		sphere.mesh.draw(&core);
+		cube.mesh.draw(&core);
 		
-
-
 		core.finishFrame();
 	}
 	core.flushGraphicsQueue();

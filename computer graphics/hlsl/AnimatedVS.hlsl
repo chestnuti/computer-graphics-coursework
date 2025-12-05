@@ -1,4 +1,4 @@
-cbuffer animatedMeshBuffer
+cbuffer animatedMeshBuffer : register(b0)
 {
     float4x4 W;
     float4x4 VP;

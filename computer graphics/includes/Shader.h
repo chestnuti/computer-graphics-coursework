@@ -27,19 +27,21 @@ public:
 		// Compile shaders
 		ID3DBlob* status;
 		std::string vertexShaderStr = readShaderFile(vertexShaderCode);
-		HRESULT hr1 = D3DCompile(vertexShaderStr.c_str(), strlen(vertexShaderStr.c_str()), NULL,
+		HRESULT hr1 = D3DCompile(vertexShaderStr.c_str(), vertexShaderStr.size(), NULL,
 			NULL, NULL, "VS", "vs_5_0", 0, 0, &vertexShader, &status);
 		//check hr
 		if (FAILED(hr1))
 		{
+			throw std::runtime_error("Vertex shader compilation failed");
 			(char*)status->GetBufferPointer();
 		}
 		std::string pixelShaderStr = readShaderFile(pixelShaderCode);
-		HRESULT hr2 = D3DCompile(pixelShaderStr.c_str(), strlen(pixelShaderStr.c_str()), NULL,
+		HRESULT hr2 = D3DCompile(pixelShaderStr.c_str(), pixelShaderStr.size(), NULL,
 			NULL, NULL, "PS", "ps_5_0", 0, 0, &pixelShader, &status);
 		//check hr
 		if (FAILED(hr2))
 		{
+			throw std::runtime_error("Pixel shader compilation failed");
 			(char*)status->GetBufferPointer();
 		}
 	}
@@ -132,6 +134,8 @@ public:
 		{
 			return;
 		}
+		createRootSignature(core, psos.size());
+
 		// Create graphics pipeline state object (PSO)
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
 		desc.InputLayout = layout;
@@ -185,6 +189,10 @@ public:
 		// create PSO
 		ID3D12PipelineState* pso;
 		HRESULT hr = core->device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso));
+		if (FAILED(hr)) {
+			// handle error
+			throw std::runtime_error("Failed to create pipeline state object, pso name: " + name);
+		}
 		// insert into map
 		psos.insert({ name, pso });
 	}
@@ -197,6 +205,61 @@ public:
 		core->getCommandList()->SetPipelineState(psos[name]);
 	}
 
+	void createRootSignature(Core* core, int registerSlot) {
+		// Upload Root Signature
+		std::vector<D3D12_ROOT_PARAMETER> parameters;
+		// Register space for VS CBV
+		D3D12_ROOT_PARAMETER rootParameterCBVS;
+		rootParameterCBVS.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		rootParameterCBVS.Descriptor.ShaderRegister = registerSlot; // Register(bi)
+		rootParameterCBVS.Descriptor.RegisterSpace = 0;
+		rootParameterCBVS.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+		parameters.push_back(rootParameterCBVS);
+		// Register space for PS CBV
+		D3D12_ROOT_PARAMETER rootParameterCBPS;
+		rootParameterCBPS.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		rootParameterCBPS.Descriptor.ShaderRegister = registerSlot; // Register(bi)
+		rootParameterCBPS.Descriptor.RegisterSpace = 0;
+		rootParameterCBPS.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		parameters.push_back(rootParameterCBPS);
+		// Register space for texture SRV
+		D3D12_DESCRIPTOR_RANGE srvRange = {};
+		srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		srvRange.NumDescriptors = 1;        // only t0
+		srvRange.BaseShaderRegister = 0;    // register(t0)
+		srvRange.RegisterSpace = 0;
+		srvRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		D3D12_ROOT_PARAMETER rootParameterSRV = {};
+		rootParameterSRV.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParameterSRV.DescriptorTable.NumDescriptorRanges = 1;
+		rootParameterSRV.DescriptorTable.pDescriptorRanges = &srvRange;
+		rootParameterSRV.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // typical for textures
+		parameters.push_back(rootParameterSRV);
+		// Register space for sampler
+		D3D12_DESCRIPTOR_RANGE samplerRange = {};
+		samplerRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+		samplerRange.NumDescriptors = 1;       // only s0
+		samplerRange.BaseShaderRegister = 0;   // register(s0)
+		samplerRange.RegisterSpace = 0;
+		samplerRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		D3D12_ROOT_PARAMETER rootParameterSampler = {};
+		rootParameterSampler.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParameterSampler.DescriptorTable.NumDescriptorRanges = 1;
+		rootParameterSampler.DescriptorTable.pDescriptorRanges = &samplerRange;
+		rootParameterSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // sampler used in PS
+		parameters.push_back(rootParameterSampler);
+		// Update Root Signature Description
+		D3D12_ROOT_SIGNATURE_DESC desc = {};
+		desc.NumParameters = parameters.size();
+		desc.pParameters = &parameters[0];
+		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		// allow drawing
+		ID3DBlob* serialized;
+		ID3DBlob* error;
+		D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized, &error);
+		core->device->CreateRootSignature(0, serialized->GetBufferPointer(), serialized->GetBufferSize(), IID_PPV_ARGS(&core->rootSignature));
+		serialized->Release();
+	}
 };
 
 
@@ -219,12 +282,6 @@ public:
 
 	void applyShader(Core* core, std::string name) {
 		shaders[name]->apply(core);
-	}
-
-	void applyAll(Core* core) {
-		for (auto& pair : shaders) {
-			pair.second->apply(core);
-		}
 	}
 
 	void updateConstantBuffers(std::string shaderName, const std::string& cbName, void* data) {

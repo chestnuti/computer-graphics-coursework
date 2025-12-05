@@ -391,6 +391,55 @@ public:
 	}
 };
 
+class Sphere {
+public:
+	std::vector<STATIC_VERTEX> vertices;
+	std::vector<unsigned int> indices;
+	Mesh mesh;
+
+	int rings;
+	int segments;
+	float radius;
+
+	void init(Core* core, int pRings, int pSegments, float pRadius) {
+		rings = pRings;
+		segments = pSegments;
+		radius = pRadius;
+		for (int lat = 0; lat <= rings; lat++) {
+			float theta = lat * M_PI / rings;
+			float sinTheta = sinf(theta);
+			float cosTheta = cosf(theta);
+			for (int lon = 0; lon <= segments; lon++) {
+				float phi = lon * 2.0f * M_PI / segments;
+				float sinPhi = sinf(phi);
+				float cosPhi = cosf(phi);
+				Vec3 position(radius * sinTheta * cosPhi, radius * cosTheta,
+					radius * sinTheta * sinPhi);
+				Vec3 normal = position.normalize();
+				float tu = 1.0f - (float)lon / segments;
+				float tv = 1.0f - (float)lat / rings;
+				vertices.push_back(addVertex(position, normal, tu, tv));
+			}
+		}
+		for (int lat = 0; lat < rings; lat++)
+		{
+			for (int lon = 0; lon < segments; lon++)
+			{
+				int current = lat * (segments + 1) + lon;
+				int next = current + segments + 1;
+				indices.push_back(current);
+				indices.push_back(next);
+				indices.push_back(current + 1);
+				indices.push_back(current + 1);
+				indices.push_back(next);
+				indices.push_back(next + 1);
+			}
+		}
+
+		mesh.init(core, vertices, indices);
+	}
+};
+
 
 
 class MeshLoader {

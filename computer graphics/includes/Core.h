@@ -212,34 +212,6 @@ public:
 		scissorRect.top = 0;
 		scissorRect.right = _width;
 		scissorRect.bottom = _height;
-
-		// Upload Root Signature
-		std::vector<D3D12_ROOT_PARAMETER> parameters;
-		D3D12_ROOT_PARAMETER rootParameterCBVS;
-		rootParameterCBVS.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		rootParameterCBVS.Descriptor.ShaderRegister = 0; // Register(b0)
-		rootParameterCBVS.Descriptor.RegisterSpace = 0;
-		rootParameterCBVS.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-		parameters.push_back(rootParameterCBVS);
-		D3D12_ROOT_PARAMETER rootParameterCBPS;
-		rootParameterCBPS.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		rootParameterCBPS.Descriptor.ShaderRegister = 0; // Register(b0)
-		rootParameterCBPS.Descriptor.RegisterSpace = 0;
-		rootParameterCBPS.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-		parameters.push_back(rootParameterCBPS);
-		// Update Root Signature Description
-		D3D12_ROOT_SIGNATURE_DESC desc = {};
-		desc.NumParameters = parameters.size();
-		desc.pParameters = &parameters[0];
-		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		// allow drawing
-		//D3D12_ROOT_SIGNATURE_DESC desc = {};
-		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		ID3DBlob* serialized;
-		ID3DBlob* error;
-		D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized, &error);
-		device->CreateRootSignature(0, serialized->GetBufferPointer(), serialized->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
-		serialized->Release();
 	}
 
 	// Reset command list for current frame
