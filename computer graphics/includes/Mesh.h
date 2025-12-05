@@ -416,8 +416,8 @@ public:
 				Vec3 position(radius * sinTheta * cosPhi, radius * cosTheta,
 					radius * sinTheta * sinPhi);
 				Vec3 normal = position.normalize();
-				float tu = 1.0f - (float)lon / segments;
-				float tv = 1.0f - (float)lat / rings;
+				float tu = (float)lon / segments;
+				float tv = (float)lat / rings;
 				vertices.push_back(addVertex(position, normal, tu, tv));
 			}
 		}

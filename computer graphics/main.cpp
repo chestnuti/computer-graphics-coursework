@@ -10,10 +10,6 @@
 #include "./includes/GEMLoader.h"
 
 
-struct alignas(16) StaticMeshBuffer {
-	Mat4 W;
-	Mat4 VP;
-};
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	// Create window and initialize core
@@ -27,17 +23,20 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	ShaderManager shaderManager;
 	shaderManager.createShader(&core, "animatedShader", "./hlsl/AnimatedVS.hlsl", "./hlsl/BasicPS.hlsl");
 	shaderManager.createShader(&core, "basicShader", "./hlsl/BasicVS.hlsl", "./hlsl/BasicPS.hlsl");
+	shaderManager.createShader(&core, "skyboxShader", "./hlsl/Skybox.hlsl", "./hlsl/Skybox.hlsl");
 	
 	// Create PSO manager
 	PSOManager psos;
 	psos.createPSO(&core, "animatedPSO", shaderManager.shaders["animatedShader"], LayoutCache::getAnimatedLayout());
 	psos.createPSO(&core, "basicPSO", shaderManager.shaders["basicShader"], LayoutCache::getStaticLayout());
+	psos.createPSO(&core, "skyboxPSO", shaderManager.shaders["skyboxShader"], LayoutCache::getStaticLayout());
 
+	// Load images
 	ImageLoader imageLoader = ImageLoader(&core);
 	imageLoader.loadImage("Trex", "Models/Trex/Textures/T-rex_Base_Color_ALB.png");
-	imageLoader.loadImage("RGBTest", "Models/Trex/Textures/Textures1_ALB.png");
+	imageLoader.loadImage("Sky", "Models/Textures/sky.png");
 	imageLoader.uploadImages("Trex");
-	imageLoader.uploadImages("RGBTest");
+	imageLoader.uploadImages("Sky");
 
 	// Load mesh
 	MeshLoader meshLoader = MeshLoader(&psos);
@@ -45,8 +44,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	Sphere sphere;
 	sphere.init(&core, 20, 20, 1.0f);
-	Cube cube;
-	cube.init(&core);
+	Plane plane;
+	plane.init(&core);
 
 	// Create animation instance
 	AnimationInstance instance;
@@ -55,14 +54,14 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	// Create camera
 	Camera camera;
 	
+	// params
 	float time = 0.0f;
-	Vec4 lights[4];
-	StaticMeshBuffer meshBuffer1;
-	meshBuffer1.W = Mat4()._Identity();
-	meshBuffer1.VP = camera.getViewProjectionMatrix();
-	StaticMeshBuffer meshBuffer2;
-	meshBuffer2.W = Mat4()._Identity();
-	meshBuffer2.VP = camera.getViewProjectionMatrix();
+
+	Mat4 W = Mat4()._Identity();
+	Mat4 VP = camera.getViewProjectionMatrix();
+	Mat4 W2 = Mat4()._Identity();
+	Mat4 skyboxBuffer_W;
+
 	
 
 	while (true) {
@@ -79,14 +78,17 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		camera.control(&win, dt);
 
 		// rotate cube over time
-		meshBuffer1.W = Mat4().RotateY(dt * 50.0f) * meshBuffer1.W;
-		meshBuffer1.VP = camera.getViewProjectionMatrix();
+		W = Mat4().RotateY(dt * 50.0f) * W;
+		VP = camera.getViewProjectionMatrix();
+		skyboxBuffer_W = Mat4().Translate(camera.position.v[0], camera.position.v[1], camera.position.v[2]) * Mat4().Scale(camera.clipFar - 1, camera.clipFar - 1, camera.clipFar - 1);
 
 		// update constant buffer
-		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "W", &meshBuffer1.W, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "VP", &meshBuffer1.VP, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "W", &meshBuffer2.W, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "VP", &meshBuffer1.VP, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "W", &W, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "VP", &VP, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("skyboxShader", "skyboxBuffer", "W", &skyboxBuffer_W, VERTEX_SHADER);
+		shaderManager.updateConstantBuffer("skyboxShader", "skyboxBuffer", "VP", &VP, VERTEX_SHADER);
 
 		//update animation
 		instance.update("Run", dt);
@@ -100,12 +102,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		// draw models
 		meshLoader.draw(&core);
 
-		// draw sphere
-		imageLoader.applyImage("RGBTest");
+		// draw cube
 		shaderManager.applyShader(&core, "basicShader");
 		psos.bind(&core, "basicPSO");
+		plane.mesh.draw(&core);
+
+		// draw skybox
+		imageLoader.applyImage("Sky");
+		shaderManager.applyShader(&core, "skyboxShader");
+		psos.bind(&core, "skyboxPSO");
 		sphere.mesh.draw(&core);
-		cube.mesh.draw(&core);
 		
 		core.finishFrame();
 	}
