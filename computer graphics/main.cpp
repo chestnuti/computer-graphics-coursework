@@ -98,19 +98,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 		// apply shader
 		imageLoader.applyImage("Trex");
-		shaderManager.applyShader(&core, "animatedShader");
 		// draw models
 		meshLoader.draw(&core);
 
 		// draw cube
-		shaderManager.applyShader(&core, "basicShader");
-		psos.bind(&core, "basicPSO");
+		psos.set(&core, "basicPSO");
 		plane.mesh.draw(&core);
 
 		// draw skybox
+		psos.set(&core, "skyboxPSO");
 		imageLoader.applyImage("Sky");
-		shaderManager.applyShader(&core, "skyboxShader");
-		psos.bind(&core, "skyboxPSO");
 		sphere.mesh.draw(&core);
 		
 		core.finishFrame();

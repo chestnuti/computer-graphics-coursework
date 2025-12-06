@@ -169,3 +169,46 @@ public:
 	}
 
 };
+
+
+
+class Sequencer {
+public:
+	struct Sequence {
+		std::string name;
+		float duration;
+	};
+	std::vector<Sequence> sequences;
+
+	int currentSequence;
+	float t;
+
+	Sequencer() : currentSequence(-1), t(0.0f) {}
+
+	void addSequence(const std::string& name, float duration) {
+		Sequence seq;
+		seq.name = name;
+		seq.duration = duration;
+		sequences.push_back(seq);
+	}
+	void playSequence(int index) {
+		if (index >= 0 && index < sequences.size()) {
+			currentSequence = index;
+			t = 0.0f;
+		}
+	}
+	void update(float dt) {
+		if (currentSequence >= 0 && currentSequence < sequences.size()) {
+			t += dt;
+			if (t > sequences[currentSequence].duration) {
+				t = 0.0f; // Loop the sequence
+			}
+		}
+	}
+	std::string getCurrentSequenceName() {
+		if (currentSequence >= 0 && currentSequence < sequences.size()) {
+			return sequences[currentSequence].name;
+		}
+		return "";
+	}
+};

@@ -542,7 +542,7 @@ public:
 
 	void draw(Core* core) {
 		for (int i = 0; i < meshes.size(); i++) {
-			psoManager->bind(core, meshes[i].psoNames);
+			psoManager->set(core, meshes[i].psoNames);
 			meshes[i].draw(core);
 		}
 	}

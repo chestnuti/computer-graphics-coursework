@@ -235,7 +235,7 @@ class ImageLoader {
 public:
 	std::unordered_map<std::string, Image> images;
 	Core* core;
-
+	// Sampler for images
 	Sampler sampler;
 
 	// Shader Resource View heap

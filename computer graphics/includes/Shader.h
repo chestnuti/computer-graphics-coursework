@@ -129,6 +129,9 @@ public:
 	std::unordered_map<std::string, ID3D12PipelineState*> psos;
 	std::unordered_map<std::string, ID3D12RootSignature*> rootSignatures;
 
+	std::unordered_map<std::string, Shader*> shaders;
+
+private:
 	void createPSO(Core* core, std::string name, ID3DBlob* vs, ID3DBlob* ps, D3D12_INPUT_LAYOUT_DESC layout)
 	{
 		if (psos.find(name) != psos.end())
@@ -201,7 +204,9 @@ public:
 		rootSignatures.insert({ name, rootSig });
 	}
 
+public:
 	void createPSO(Core* core, std::string name, Shader* shader, D3D12_INPUT_LAYOUT_DESC layout) {
+		shaders.insert({ name, shader });
 		createPSO(core, name, shader->vertexShader, shader->pixelShader, layout);
 	}
 
@@ -209,6 +214,13 @@ public:
 		// Set both root signature and PSO
 		core->getCommandList()->SetGraphicsRootSignature(rootSignatures[name]);
 		core->getCommandList()->SetPipelineState(psos[name]);
+	}
+
+	void set(Core* core, std::string name) {
+		// Bind PSO and root signature
+		bind(core, name);
+		// Apply shader constant buffers
+		shaders[name]->apply(core);
 	}
 
 	ID3D12RootSignature* createRootSignature(Core* core, int registerSlot) {
