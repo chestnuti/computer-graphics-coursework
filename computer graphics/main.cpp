@@ -60,11 +60,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	cube.init(&core, 1.0f);
 
 	std::vector<InstanceData> instanceDatas;
-	for (int i = 0; i < 5000; i++) {
+	for (int i = 0; i < 3000; i++) {
 		InstanceData inst;
 		float randX = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 60.0f;
 		float randZ = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 60.0f;
-		inst.World = Mat4().Translate(randX, 0, randZ) * Mat4().Scale(0.01f, 0.01f, 0.01f);
+		float randScale = ((float)(rand() % 1000) / 1000.0f) * 0.01f + 0.005f;
+		inst.World = Mat4().Translate(randX, 0, randZ) * Mat4().Scale(randScale, randScale, randScale);
 		inst.World = inst.World.Transpose();
 		inst.Color = Vec4(1, 1, 1, 1);
 		instanceDatas.push_back(inst);

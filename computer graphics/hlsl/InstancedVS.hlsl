@@ -14,7 +14,6 @@ struct VS_INPUT
     float4 world1 : WORLD1;
     float4 world2 : WORLD2;
     float4 world3 : WORLD3;
-    float4 instanceColor : INSTANCECOLOR;
 };
 struct PS_INPUT
 {
@@ -34,9 +33,12 @@ PS_INPUT VS(VS_INPUT input)
     };
     PS_INPUT output;
     output.Pos = mul(input.Pos, world);
+    output.Pos = mul(output.Pos, W);
     output.Pos = mul(output.Pos, VP);
     output.Normal = mul(input.Normal, (float3x3) world);
+    output.Normal = mul(output.Normal, (float3x3) W);
     output.Tangent = mul(input.Tangent, (float3x3) world);
+    output.Tangent = mul(output.Tangent, (float3x3) W);
     output.TexCoords = input.TexCoords;
     return output;
 }

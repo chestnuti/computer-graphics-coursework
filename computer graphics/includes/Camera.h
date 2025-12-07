@@ -83,10 +83,10 @@ public:
 		float sensitivity = 0.1f;
 		float xoffset = win->mousex * sensitivity;
 		float yoffset = win->mousey * sensitivity;
-		if (!win->mouseButtons[0]) {
+		/*if (!win->mouseButtons[0]) {
 			xoffset = 0.0f;
 			yoffset = 0.0f;
-		}
+		}*/
 		// update yaw and pitch
 		static float yaw = -90.0f;
 		static float pitch = 0.0f;
