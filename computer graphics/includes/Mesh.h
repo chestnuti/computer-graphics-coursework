@@ -143,6 +143,11 @@ STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
 	return v;
 }
 
+struct InstanceData {
+	Mat4 World;
+	Vec4 Color;
+};
+
 
 
 
@@ -182,6 +187,32 @@ public:
 		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutStatic, 4 };
 		return desc;
 	}
+
+	static const D3D12_INPUT_LAYOUT_DESC& getInstancedLayout() {
+		static const D3D12_INPUT_ELEMENT_DESC inputLayoutInstanced[] = {
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			// For instance£¨slot 1£©
+			{ "WORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+			{ "WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+			{ "WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+			{ "WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCECOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+		};
+		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutInstanced, 9 };
+		return desc;
+	}
 };
 
 class Mesh {
@@ -199,7 +230,7 @@ public:
 
 	std::string psoNames;
 
-	void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices, unsigned int* indices, int numIndices)
+	virtual void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices, unsigned int* indices, int numIndices)
 	{
 		// Create an upload heap to upload the vertex buffer data
 		D3D12_HEAP_PROPERTIES heapprops = {};
@@ -251,19 +282,19 @@ public:
 
 	}
 
-	void init(Core* core, std::vector<STATIC_VERTEX> vertices, std::vector<unsigned int> indices)
+	virtual void init(Core* core, std::vector<STATIC_VERTEX> vertices, std::vector<unsigned int> indices)
 	{
 		init(core, &vertices[0], sizeof(STATIC_VERTEX), vertices.size(), &indices[0], indices.size());
 		inputLayoutDesc = LayoutCache::getStaticLayout();
 	}
 
-	void init(Core* core, std::vector<ANIMATED_VERTEX> vertices, std::vector<unsigned int> indices)
+	virtual void init(Core* core, std::vector<ANIMATED_VERTEX> vertices, std::vector<unsigned int> indices)
 	{
 		init(core, &vertices[0], sizeof(ANIMATED_VERTEX), vertices.size(), &indices[0], indices.size());
 		inputLayoutDesc = LayoutCache::getAnimatedLayout();
 	}
 
-	void draw(Core* core)
+	virtual void draw(Core* core)
 	{
 		core->getCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		core->getCommandList()->IASetVertexBuffers(0, 1, &vbView);
@@ -274,11 +305,10 @@ public:
 
 
 
-class ScreenSpaceTriangle {
+class ScreenSpaceTriangle : public Mesh{
 public:
 	// Define triangle vertices
 	PRIM_VERTEX vertices[3];
-	Mesh mesh;
 
 	ScreenSpaceTriangle() {
 		vertices[0].position = Vec3(0, 1.0f, 0);
@@ -302,15 +332,14 @@ public:
 			verts.push_back(v);
 		}
 		std::vector<unsigned int> indices = { 0, 1, 2 };
-		mesh.init(core, verts, indices);
+		Mesh::init(core, verts, indices);
 	}
 };
 
-class Plane {
+class Plane : public Mesh{
 public:
 	std::vector<STATIC_VERTEX> vertices;
 	std::vector<unsigned int> indices;
-	Mesh mesh;
 	
 	void init(Core* core, float size) {
 		vertices.push_back(addVertex(Vec3(-size, 0, -size), Vec3(0, 1, 0), 0, 0));
@@ -320,26 +349,24 @@ public:
 		
 		indices.push_back(2); indices.push_back(1); indices.push_back(0);
 		indices.push_back(1); indices.push_back(2); indices.push_back(3);
-		mesh.init(core, vertices, indices);
+		Mesh::init(core, vertices, indices);
 	}
 };
 
-class Cube {
+class Cube : public Mesh {
 public:
 	std::vector<STATIC_VERTEX> vertices;
 	std::vector<unsigned int> indices;
-	Mesh mesh;
 
-	Vec3 p0 = Vec3(-1.0f, -1.0f, -1.0f);
-	Vec3 p1 = Vec3(1.0f, -1.0f, -1.0f);
-	Vec3 p2 = Vec3(1.0f, 1.0f, -1.0f);
-	Vec3 p3 = Vec3(-1.0f, 1.0f, -1.0f);
-	Vec3 p4 = Vec3(-1.0f, -1.0f, 1.0f);
-	Vec3 p5 = Vec3(1.0f, -1.0f, 1.0f);
-	Vec3 p6 = Vec3(1.0f, 1.0f, 1.0f);
-	Vec3 p7 = Vec3(-1.0f, 1.0f, 1.0f);
-
-	void init(Core* core){
+	void init(Core* core, float size) {
+		Vec3 p0 = Vec3(-size, -size, -size);
+		Vec3 p1 = Vec3(size, -size, -size);
+		Vec3 p2 = Vec3(size, size, -size);
+		Vec3 p3 = Vec3(-size, size, -size);
+		Vec3 p4 = Vec3(-size, -size, size);
+		Vec3 p5 = Vec3(size, -size, size);
+		Vec3 p6 = Vec3(size, size, size);
+		Vec3 p7 = Vec3(-size, size, size);
 		// Front face
 		vertices.push_back(addVertex(p0, Vec3(0.0f, 0.0f, -1.0f), 0.0f, 1.0f));
 		vertices.push_back(addVertex(p1, Vec3(0.0f, 0.0f, -1.0f), 1.0f, 1.0f));
@@ -385,15 +412,14 @@ public:
 		indices.push_back(20); indices.push_back(21); indices.push_back(22);
 		indices.push_back(20); indices.push_back(22); indices.push_back(23);
 
-		mesh.init(core, vertices, indices);
+		Mesh::init(core, vertices, indices);
 	}
 };
 
-class Sphere {
+class Sphere : public Mesh{
 public:
 	std::vector<STATIC_VERTEX> vertices;
 	std::vector<unsigned int> indices;
-	Mesh mesh;
 
 	int rings;
 	int segments;
@@ -434,21 +460,21 @@ public:
 			}
 		}
 
-		mesh.init(core, vertices, indices);
+		Mesh::init(core, vertices, indices);
 	}
 };
 
 
 
-class MeshLoader {
+class Object{
 public:
-	std::vector<Mesh> meshes;
+	std::vector<Mesh*> meshes;
 	Animation animation;
 
 	PSOManager* psoManager;
 	Mat4 worldMatrix;
 
-	MeshLoader(PSOManager* psoMgr) : psoManager(psoMgr) {}
+	Object(PSOManager* psoMgr) : psoManager(psoMgr) {}
 
 	void loadGEM(Core* core, const char* filename, std::vector<std::string> psonames) {
 		// Load GEM file
@@ -461,19 +487,19 @@ public:
 		if (gemanimation.bones.size() > 0) {
 			// Load Meshes
 			for (int i = 0; i < gemmeshes.size(); i++) {
-				Mesh mesh;
+				Mesh* mesh = new Mesh();
 				std::vector<ANIMATED_VERTEX> vertices;
 				for (int j = 0; j < gemmeshes[i].verticesAnimated.size(); j++) {
 					ANIMATED_VERTEX v;
 					memcpy(&v, &gemmeshes[i].verticesAnimated[j], sizeof(ANIMATED_VERTEX));
 					vertices.push_back(v);
 				}
-				mesh.init(core, vertices, gemmeshes[i].indices);
+				mesh->init(core, vertices, gemmeshes[i].indices);
 				// Assign PSO name based on mesh index
 				if (i < numPSOs)
-					mesh.psoNames = psonames[i];
+					mesh->psoNames = psonames[i];
 				else
-					mesh.psoNames = psonames[numPSOs - 1];
+					mesh->psoNames = psonames[numPSOs - 1];
 				meshes.push_back(mesh);
 			}
 			// Load Bones for Animation
@@ -515,19 +541,19 @@ public:
 		else {
 			// Load Meshes
 			for (int i = 0; i < gemmeshes.size(); i++) {
-				Mesh mesh;
+				Mesh* mesh = new Mesh();
 				std::vector<STATIC_VERTEX> vertices;
 				for (int j = 0; j < gemmeshes[i].verticesStatic.size(); j++) {
 					STATIC_VERTEX v;
 					memcpy(&v, &gemmeshes[i].verticesStatic[j], sizeof(STATIC_VERTEX));
 					vertices.push_back(v);
 				}
-				mesh.init(core, vertices, gemmeshes[i].indices);
+				mesh->init(core, vertices, gemmeshes[i].indices);
 				// Assign PSO name based on mesh index
 				if (i < numPSOs)
-					mesh.psoNames = psonames[i];
+					mesh->psoNames = psonames[i];
 				else
-					mesh.psoNames = psonames[numPSOs - 1];
+					mesh->psoNames = psonames[numPSOs - 1];
 				meshes.push_back(mesh);
 			}
 		}
@@ -541,8 +567,115 @@ public:
 
 	void draw(Core* core) {
 		for (int i = 0; i < meshes.size(); i++) {
-			psoManager->set(core, meshes[i].psoNames);
-			meshes[i].draw(core);
+			psoManager->set(core, meshes[i]->psoNames);
+			meshes[i]->draw(core);
+		}
+	}
+};
+
+
+
+class InstancedMesh{
+public:
+	Mesh* mesh;
+
+	// Instance (per-mesh)
+	ID3D12Resource* instanceBuffer;
+	D3D12_VERTEX_BUFFER_VIEW instanceBufferView = {};
+	UINT instanceCount = 0;
+	// CPU address to the instance buffer
+	InstanceData* instanceCPUAddress;
+
+	void init(Core* core, Mesh* pMesh, const std::vector<InstanceData>& instanceData)
+	{
+		mesh = pMesh;
+		createInstances(core, instanceData);
+	}
+
+	void createInstances(Core* core, const std::vector<InstanceData>& instanceData)
+	{
+		instanceCount = (UINT)instanceData.size();
+		UINT bufferSize = instanceCount * sizeof(InstanceData);
+
+		// Create Upload Heap buffer for instances (dynamic update friendly)
+		D3D12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+		D3D12_RESOURCE_DESC bufferDesc = {};
+		bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		bufferDesc.Alignment = 0;
+		bufferDesc.Width = bufferSize;
+		bufferDesc.Height = 1;
+		bufferDesc.DepthOrArraySize = 1;
+		bufferDesc.MipLevels = 1;
+		bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+		bufferDesc.SampleDesc.Count = 1;
+		bufferDesc.SampleDesc.Quality = 0;
+		bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+		core->device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr, IID_PPV_ARGS(&instanceBuffer));
+		// Permanent map
+		instanceBuffer->Map(0, nullptr, (void**)&instanceCPUAddress);
+		// Copy data initially
+		memcpy(instanceCPUAddress, instanceData.data(), bufferSize);
+		// Fill instance buffer view
+		instanceBufferView.BufferLocation = instanceBuffer->GetGPUVirtualAddress();
+		instanceBufferView.StrideInBytes = sizeof(InstanceData);
+		instanceBufferView.SizeInBytes = bufferSize;
+	}
+	
+	void updateInstances(const std::vector<InstanceData>& instanceData)
+	{
+		memcpy(instanceCPUAddress, instanceData.data(), instanceCount * sizeof(InstanceData));
+	}
+
+	void drawInstanced(Core* core)
+	{
+		core->getCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		// slot 0 = vertex buffer, slot 1 = instance buffer
+		D3D12_VERTEX_BUFFER_VIEW views[2] = { mesh->vbView, instanceBufferView };
+		core->getCommandList()->IASetVertexBuffers(0, 2, views);
+		core->getCommandList()->IASetIndexBuffer(&mesh->ibView);
+		core->getCommandList()->DrawIndexedInstanced(mesh->numMeshIndices, instanceCount, 0, 0, 0);
+	}
+};
+
+
+
+class InstancedObject {
+public:
+	std::vector<InstancedMesh*> instancedMeshes;
+	PSOManager* psoManager;
+
+	InstancedObject(PSOManager* psoMgr) : psoManager(psoMgr) {}
+
+	void init(Core* core, Object* object, const std::vector<InstanceData>& instanceData) {
+		for (int i = 0; i < object->meshes.size(); i++) {
+			addInstancedMesh(core, object->meshes[i], instanceData);
+		}
+	}
+
+	void addInstancedMesh(Core* core, Mesh* mesh, const std::vector<InstanceData>& instanceData) {
+		InstancedMesh* instancedMesh = new InstancedMesh();
+		instancedMesh->init(core, mesh, instanceData);
+		instancedMeshes.push_back(instancedMesh);
+	}
+
+	void updateInstances(int meshIndex, const std::vector<InstanceData>& instanceData) {
+		if (meshIndex >= 0 && meshIndex < instancedMeshes.size()) {
+			instancedMeshes[meshIndex]->updateInstances(instanceData);
+		}
+	}
+
+	void updateInstances(const std::vector<InstanceData>& instanceData) {
+		for (int i = 0; i < instancedMeshes.size(); i++) {
+			instancedMeshes[i]->updateInstances(instanceData);
+		}
+	}
+
+	void drawInstanced(Core* core) {
+		for (int i = 0; i < instancedMeshes.size(); i++) {
+			instancedMeshes[i]->drawInstanced(core);
 		}
 	}
 };

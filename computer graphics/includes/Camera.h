@@ -80,37 +80,18 @@ public:
 		if (win->keys['Q']) position -= up * dt * speed;
 		if (win->keys['E']) position += up * dt * speed;
 		// mouse look
-		POINT mousePos;
-		GetCursorPos(&mousePos);
-		ScreenToClient(win->hwnd, &mousePos);
-		static bool firstMouse = true;
-		if (win->mouseButtons[0])
-		{
-			firstMouse = false;
-		}
-		else
-		{
-			firstMouse = true;
-		}
-		static int lastX = win->width / 2;
-		static int lastY = win->height / 2;
-		if (firstMouse)
-		{
-			lastX = mousePos.x;
-			lastY = mousePos.y;
-			firstMouse = false;
-		}
-		int xoffset = mousePos.x - lastX;
-		int yoffset = lastY - mousePos.y;
-		lastX = mousePos.x;
-		lastY = mousePos.y;
 		float sensitivity = 0.1f;
-		xoffset = static_cast<int>(xoffset * sensitivity);
-		yoffset = static_cast<int>(yoffset * sensitivity);
+		float xoffset = win->mousex * sensitivity;
+		float yoffset = win->mousey * sensitivity;
+		if (!win->mouseButtons[0]) {
+			xoffset = 0.0f;
+			yoffset = 0.0f;
+		}
+		// update yaw and pitch
 		static float yaw = -90.0f;
 		static float pitch = 0.0f;
-		yaw += static_cast<float>(xoffset);
-		pitch += static_cast<float>(yoffset);
+		yaw += xoffset;
+		pitch -= yoffset;
 		if (pitch > 89.0f)
 			pitch = 89.0f;
 		if (pitch < -89.0f)

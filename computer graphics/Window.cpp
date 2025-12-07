@@ -30,6 +30,8 @@ void Window::create(int window_width, int window_height, std::string window_name
 		0, 0, width, height, NULL, NULL, hinstance, this);
 
 	window = this;
+	// Hide cursor
+	ShowCursor(FALSE);
 }
 
 
@@ -45,6 +47,7 @@ void Window::processMessages() {
 
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	static bool lockMouse = false;
 	switch (msg)
 	{
 	case WM_DESTROY:
@@ -83,7 +86,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	}
 	case WM_MOUSEMOVE:
 	{
-		window->updateMouse(WINDOW_GET_X_LPARAM(lParam), WINDOW_GET_Y_LPARAM(lParam));
+		//window->updateMouse(WINDOW_GET_X_LPARAM(lParam), WINDOW_GET_Y_LPARAM(lParam));
+		if (!lockMouse) {
+			int currentX = WINDOW_GET_X_LPARAM(lParam);
+			int currentY = WINDOW_GET_Y_LPARAM(lParam);
+			int centerX = window->width / 2;
+			int centerY = window->height / 2;
+			int deltaX = currentX - centerX;
+			int deltaY = currentY - centerY;
+			
+			window->updateMouse(deltaX, deltaY);
+			POINT centerPoint = { centerX, centerY };
+			ClientToScreen(hwnd, &centerPoint);
+			lockMouse = true;
+			SetCursorPos(centerPoint.x, centerPoint.y);
+			lockMouse = false;
+		}
 		return 0;
 	}
 	default:
