@@ -21,6 +21,12 @@ t remap(t val, t inMin, t inMax, t outMin, t outMax)
 	return outMin + (outMax - outMin) * ((val - inMin) / (inMax - inMin));
 }
 
+template<typename t>
+t remap_clamp(t val, t inMin, t inMax, t outMin, t outMax)
+{
+	return clamp(remap(val, inMin, inMax, outMin, outMax), outMin, outMax);
+}
+
 Vec4 slerp(Vec4 v0, Vec4 v1, float t)
 {
 	// normalize input vectors

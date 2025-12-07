@@ -50,14 +50,15 @@ public:
 		}
 		return result;
 	}
-	Mat4& operator*(float val)
+	Mat4 operator*(float val) const
 	{
+		Mat4 result;
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
-				m[i][j] *= val;
+				result.m[i][j] = m[i][j] * val;
 			}
 		}
-		return *this;
+		return result;
 	}
 	Mat4& operator*=(const Mat4& mat)
 	{

@@ -168,47 +168,172 @@ public:
 		animation->calcFinalTransforms(matrices);
 	}
 
+	Mat4* getBoneMatrices() {
+		return matrices;
+	}
+
 };
 
 
 
 class Sequencer {
 public:
-	struct Sequence {
-		std::string name;
-		float duration;
+	struct Item {
+		AnimationInstance* animationInstance;
+		std::string animationName;
+		float weight;
+		float startTime;
+		float speed;
 	};
-	std::vector<Sequence> sequences;
+	float totalWeight;
+	std::vector<Item> items;
+	Mat4 matrices[256];
 
-	int currentSequence;
-	float t;
+	Sequencer() : totalWeight(0.0f) {}
 
-	Sequencer() : currentSequence(-1), t(0.0f) {}
-
-	void addSequence(const std::string& name, float duration) {
-		Sequence seq;
-		seq.name = name;
-		seq.duration = duration;
-		sequences.push_back(seq);
+	void addItem(Animation* animation, std::string name, float weight, float startTime, float speed) {
+		Item item;
+		item.animationInstance = new AnimationInstance();
+		item.animationInstance->animation = animation;
+		item.animationName = name;
+		item.weight = weight;
+		item.startTime = startTime;
+		item.speed = speed;
+		items.push_back(item);
+		totalWeight += weight;
 	}
-	void playSequence(int index) {
-		if (index >= 0 && index < sequences.size()) {
-			currentSequence = index;
-			t = 0.0f;
-		}
-	}
-	void update(float dt) {
-		if (currentSequence >= 0 && currentSequence < sequences.size()) {
-			t += dt;
-			if (t > sequences[currentSequence].duration) {
-				t = 0.0f; // Loop the sequence
+
+	void update(float globalTime, float dt) {
+		for (int i = 0; i < items.size(); i++) {
+			if (globalTime >= items[i].startTime) {
+				items[i].animationInstance->update(items[i].animationName, dt * items[i].speed);
 			}
 		}
-	}
-	std::string getCurrentSequenceName() {
-		if (currentSequence >= 0 && currentSequence < sequences.size()) {
-			return sequences[currentSequence].name;
+		// blend matrices
+		for (int b = 0; b < 256; b++) {
+			matrices[b] = Mat4()._Identity().Scale(0.0f, 0.0f, 0.0f); // reset to zero matrix
+			for (int i = 0; i < items.size(); i++) {
+				if (globalTime >= items[i].startTime) {
+					Mat4* boneMatrices = items[i].animationInstance->getBoneMatrices();
+					if (totalWeight > 0.0f) {
+						boneMatrices[b] = boneMatrices[b] * (items[i].weight / totalWeight);
+						matrices[b] += boneMatrices[b];
+					}
+				}
+			}
+			
 		}
-		return "";
+	}
+
+	Mat4* getBoneMatrices() {
+		return matrices;
+	}
+
+	void setWeights(std::vector<float> weights) {
+		if (weights.size() != items.size()) return;
+		totalWeight = 0.0f;
+		for (int i = 0; i < items.size(); i++) {
+			items[i].weight = weights[i];
+			totalWeight += weights[i];
+		}
+	}
+
+	void setWeight(int index, float weight) {
+		if (index < 0 || index >= items.size()) return;
+		totalWeight = totalWeight - items[index].weight + weight;
+		items[index].weight = weight;
+	}
+
+	void clearWeights() {
+		for (int i = 0; i < items.size(); i++) {
+			items[i].weight = 0.0f;
+		}
+		totalWeight = 0.0f;
+	}
+
+	~Sequencer() {
+		items.clear();
+	}
+};
+
+
+
+class StateMachine {
+public:
+	Sequencer* sequencer;
+	std::string currentState;
+	std::vector<std::string> stateList;
+	std::vector<float> transitionTimes;
+	float transTime;
+
+	StateMachine(Sequencer* seq) : sequencer(seq), currentState(""), transTime(0.0f) {}
+
+	int getStateIndex(std::string state) {
+		for (int i = 0; i < sequencer->items.size(); i++) {
+			if (sequencer->items[i].animationName == state) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	void transitionTo(std::string state, float time) {
+		stateList.push_back(state);
+		transitionTimes.push_back(time);
+	}
+
+	void setCurrentState(std::string state) {
+		currentState = state;
+		stateList.clear();
+		int currentIndex = getStateIndex(currentState);
+		if (currentIndex != -1) {
+			sequencer->clearWeights();
+			sequencer->setWeight(currentIndex, 1.0f);
+		}
+	}
+
+	void update(float globalTime, float dt) {
+		// No states to process
+		if (stateList.size() != 0) {
+			// First time setup
+			if (currentState == "") {
+				currentState = stateList[0];
+				stateList.erase(stateList.begin());
+				transitionTimes.erase(transitionTimes.begin());
+				int currentIndex = getStateIndex(currentState);
+				if (currentIndex != -1) {
+					sequencer->clearWeights();
+					sequencer->setWeight(currentIndex, 1.0f);
+				}
+			}
+			else {
+				// Process transition
+				std::string nextState = stateList[0];
+				// Initialize transition time
+				if (transTime <= 0.0f)
+					transTime = transitionTimes[0];
+				// Update transition time
+				transTime -= dt;
+				// Update weights
+				int currentIndex = getStateIndex(currentState);
+				int nextIndex = getStateIndex(nextState);
+				if (currentIndex != -1 && nextIndex != -1) {
+					float factor = remap(transTime, 0.0f, transitionTimes[0], 1.0f, 0.0f);
+					sequencer->setWeight(currentIndex, 1.0f - factor);
+					sequencer->setWeight(nextIndex, factor);
+				}
+				// Check if transition complete
+				if (transTime <= 0.0f) {
+					currentState = nextState;
+					// Remove first state from list
+					stateList.erase(stateList.begin());
+					transitionTimes.erase(transitionTimes.begin());
+					if (stateList.size() > 0)
+						transTime = transitionTimes[0];
+				}
+			}
+		}
+		// Update sequencer
+		sequencer->update(globalTime, dt);
 	}
 };

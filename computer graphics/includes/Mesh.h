@@ -197,12 +197,10 @@ public:
 
 	unsigned int numMeshIndices;
 
-	Mat4 worldMatrix;
 	std::string psoNames;
 
 	void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices, unsigned int* indices, int numIndices)
 	{
-		worldMatrix = Mat4()._Identity();
 		// Create an upload heap to upload the vertex buffer data
 		D3D12_HEAP_PROPERTIES heapprops = {};
 		heapprops.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -314,11 +312,11 @@ public:
 	std::vector<unsigned int> indices;
 	Mesh mesh;
 	
-	void init(Core* core) {
-		vertices.push_back(addVertex(Vec3(-15, 0, -15), Vec3(0, 1, 0), 0, 0));
-		vertices.push_back(addVertex(Vec3(15, 0, -15), Vec3(0, 1, 0), 1, 0));
-		vertices.push_back(addVertex(Vec3(-15, 0, 15), Vec3(0, 1, 0), 0, 1));
-		vertices.push_back(addVertex(Vec3(15, 0, 15), Vec3(0, 1, 0), 1, 1));
+	void init(Core* core, float size) {
+		vertices.push_back(addVertex(Vec3(-size, 0, -size), Vec3(0, 1, 0), 0, 0));
+		vertices.push_back(addVertex(Vec3(size, 0, -size), Vec3(0, 1, 0), 1, 0));
+		vertices.push_back(addVertex(Vec3(-size, 0, size), Vec3(0, 1, 0), 0, 1));
+		vertices.push_back(addVertex(Vec3(size, 0, size), Vec3(0, 1, 0), 1, 1));
 		
 		indices.push_back(2); indices.push_back(1); indices.push_back(0);
 		indices.push_back(1); indices.push_back(2); indices.push_back(3);
@@ -448,6 +446,7 @@ public:
 	Animation animation;
 
 	PSOManager* psoManager;
+	Mat4 worldMatrix;
 
 	MeshLoader(PSOManager* psoMgr) : psoManager(psoMgr) {}
 

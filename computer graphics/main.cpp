@@ -32,24 +32,36 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	psos.createPSO(&core, "skyboxPSO", shaderManager.shaders["skyboxShader"], LayoutCache::getStaticLayout());
 
 	// Load images
-	ImageLoader imageLoader = ImageLoader(&core);
+	ImageLoader imageLoader(&core);
 	imageLoader.loadImage("Trex", "Models/Trex/Textures/T-rex_Base_Color_ALB.png");
 	imageLoader.loadImage("Sky", "Models/Textures/sky.png");
+	imageLoader.loadImage("Ground", "Models/Textures/aerial_rocks_04_diff_4k.png");
 	imageLoader.uploadImages("Trex");
 	imageLoader.uploadImages("Sky");
+	imageLoader.uploadImages("Ground");
 
 	// Load mesh
-	MeshLoader meshLoader = MeshLoader(&psos);
+	MeshLoader meshLoader(&psos);
 	meshLoader.loadGEM(&core, "Models/Trex/TRex.gem", "animatedPSO");
 
 	Sphere sphere;
 	sphere.init(&core, 20, 20, 1.0f);
 	Plane plane;
-	plane.init(&core);
+	plane.init(&core, 30.0f);
 
-	// Create animation instance
-	AnimationInstance instance;
-	instance.animation = &meshLoader.animation;
+	// Create secquencer
+	Sequencer sequencer;
+	sequencer.addItem(&meshLoader.animation, "Run", 0.0f, 0.0f, 1.0f);
+	sequencer.addItem(&meshLoader.animation, "walk", 0.0f, 0.0f, 1.0f);
+	sequencer.addItem(&meshLoader.animation, "Idle", 0.0f, 0.0f, 1.0f);
+	sequencer.addItem(&meshLoader.animation, "attack", 0.0f, 0.0f, 1.0f);
+
+	//Create State Machine
+	StateMachine stateMachine(&sequencer);
+	stateMachine.setCurrentState("Run");
+	stateMachine.transitionTo("walk", 5.0f);
+	stateMachine.transitionTo("Idle", 5.0f);
+	stateMachine.transitionTo("attack", 1.0f);
 	
 	// Create camera
 	Camera camera;
@@ -59,10 +71,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	Mat4 W = Mat4()._Identity();
 	Mat4 VP = camera.getViewProjectionMatrix();
-	Mat4 W2 = Mat4()._Identity();
+	Mat4 W2 = Mat4()._Identity().Translate(3.0f, 0.0f, -5.0f);
 	Mat4 skyboxBuffer_W;
 
-	
+	float animationTransition = 0.0f;
 
 	while (true) {
 		core.beginFrame();
@@ -78,7 +90,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		camera.control(&win, dt);
 
 		// rotate cube over time
-		W = Mat4().RotateY(dt * 50.0f) * W;
+		W *= Mat4().Translate(0.0f, 0.0f, 0.05f * remap_clamp(10.0f - time, 0.0f, 10.0f, 0.0f, 1.0f));
 		VP = camera.getViewProjectionMatrix();
 		skyboxBuffer_W = Mat4().Translate(camera.position.v[0], camera.position.v[1], camera.position.v[2]) * Mat4().Scale(camera.clipFar - 1, camera.clipFar - 1, camera.clipFar - 1);
 
@@ -91,8 +103,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		shaderManager.updateConstantBuffer("skyboxShader", "skyboxBuffer", "VP", &VP, VERTEX_SHADER);
 
 		//update animation
-		instance.update("Run", dt);
-		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "bones", instance.matrices, VERTEX_SHADER);
+		stateMachine.update(time, dt);
+		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "bones", sequencer.getBoneMatrices(), VERTEX_SHADER);
 		
 		core.beginRenderPass();
 
@@ -103,6 +115,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 		// draw cube
 		psos.set(&core, "basicPSO");
+		imageLoader.applyImage("Ground");
 		plane.mesh.draw(&core);
 
 		// draw skybox
