@@ -6,6 +6,7 @@
 #include "GEMLoader.h"
 #include "Shader.h"
 #include "Animation.h"
+#include "Image.h"
 
 
 class Triangle {
@@ -227,6 +228,7 @@ public:
 	unsigned int numMeshIndices;
 
 	std::string psoNames;
+	Image* diffuseTexture = nullptr;
 
 	virtual void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices, unsigned int* indices, int numIndices)
 	{
@@ -294,10 +296,24 @@ public:
 
 	virtual void draw(Core* core)
 	{
+		bindTexture(core);
 		core->getCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		core->getCommandList()->IASetVertexBuffers(0, 1, &vbView);
 		core->getCommandList()->IASetIndexBuffer(&ibView);
 		core->getCommandList()->DrawIndexedInstanced(numMeshIndices, 1, 0, 0, 0);
+	}
+
+	void setTexture(Image* texture)
+	{
+		diffuseTexture = texture;
+	}
+
+	void bindTexture(Core* core)
+	{
+		if (diffuseTexture != nullptr)
+		{
+			diffuseTexture->apply(core);
+		}
 	}
 };
 
@@ -569,6 +585,12 @@ public:
 			meshes[i]->draw(core);
 		}
 	}
+
+	void setTexture(Image* texture) {
+		for (int i = 0; i < meshes.size(); i++) {
+			meshes[i]->setTexture(texture);
+		}
+	}
 };
 
 
@@ -629,6 +651,7 @@ public:
 
 	void drawInstanced(Core* core)
 	{
+		mesh->bindTexture(core);
 		core->getCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		// slot 0 = vertex buffer, slot 1 = instance buffer
 		D3D12_VERTEX_BUFFER_VIEW views[2] = { mesh->vbView, instanceBufferView };

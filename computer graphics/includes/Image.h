@@ -268,6 +268,7 @@ public:
 			return false;
 		}
 		images.insert({ name, image });
+		uploadImages(name);
 		return true;
 	}
 
@@ -288,14 +289,21 @@ public:
 	}
 
 	void applyImage(std::string name) {
-		// set descriptor heaps
-		ID3D12DescriptorHeap* heaps[] = { srvHeap, sampler.getHeap()};
-		core->getCommandList()->SetDescriptorHeaps(2, heaps);
-		// bind sampler (s0)
-		core->getCommandList()->SetGraphicsRootDescriptorTable(3, sampler.getHeap()->GetGPUDescriptorHandleForHeapStart());
-
+		applySampler();
 		// apply image
 		Image* image = &images[name];
 		image->apply(core);
+	}
+
+	void applySampler() {
+		// set descriptor heaps
+		ID3D12DescriptorHeap* heaps[] = { srvHeap, sampler.getHeap() };
+		core->getCommandList()->SetDescriptorHeaps(2, heaps);
+		// bind sampler (s0)
+		core->getCommandList()->SetGraphicsRootDescriptorTable(3, sampler.getHeap()->GetGPUDescriptorHandleForHeapStart());
+	}
+
+	Image* getImage(std::string name) {
+		return &images[name];
 	}
 };

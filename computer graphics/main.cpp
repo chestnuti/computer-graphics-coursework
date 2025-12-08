@@ -39,21 +39,21 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	imageLoader.loadImage("Sky", "Models/Textures/sky.png");
 	imageLoader.loadImage("Ground", "Models/Textures/aerial_rocks_04_diff_4k.png");
 	imageLoader.loadImage("ColorMap", "Models/LowPolyMilitary/Textures/Textures1_ALB.png");
-	imageLoader.uploadImages("Trex");
-	imageLoader.uploadImages("Sky");
-	imageLoader.uploadImages("Ground");
-	imageLoader.uploadImages("ColorMap");
 
 	// Load mesh
 	Object trex(&psos);
 	trex.loadGEM(&core, "Models/Trex/TRex.gem", "animatedPSO");
+	trex.setTexture(imageLoader.getImage("Trex"));
 	Object grass(&psos);
 	grass.loadGEM(&core, "Models/LowPolyMilitary/grass_003.gem", "basicPSO");
+	grass.setTexture(imageLoader.getImage("ColorMap"));
 
 	Sphere sphere;
 	sphere.init(&core, 20, 20, 1.0f);
+	sphere.setTexture(imageLoader.getImage("Sky"));
 	Plane plane;
 	plane.init(&core, 30.0f);
+	plane.setTexture(imageLoader.getImage("Ground"));
 
 	// Create cube instances
 	Cube cube;
@@ -140,12 +140,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		
 		core.beginRenderPass();
 
-		// apply shader
-		imageLoader.applyImage("Trex");
+		imageLoader.applySampler();
+
 		// draw models
 		trex.draw(&core);
-		imageLoader.applyImage("ColorMap");
-		//grass.draw(&core);
 
 		// draw instances
 		psos.set(&core, "instancedPSO");
@@ -153,13 +151,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 		// draw cube
 		psos.set(&core, "basicPSO");
-		imageLoader.applyImage("Ground");
 		plane.draw(&core);
 
 
 		// draw skybox
 		psos.set(&core, "skyboxPSO");
-		imageLoader.applyImage("Sky");
 		sphere.draw(&core);
 		
 		core.finishFrame();
