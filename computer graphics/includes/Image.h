@@ -5,6 +5,10 @@
 #include <wrl/client.h>
 #include <unordered_map>
 
+#define DIFFUSE_TEXTURE_SLOT 2
+#define NORMAL_TEXTURE_SLOT 3
+#define SAMPLER_SLOT 4
+
 
 class Image {
 public:
@@ -59,8 +63,8 @@ public:
 		core->uploadResource(texture, uploadData.data(), (unsigned int)uploadData.size(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &footprint);
 	}
 
-	void apply(Core* core) {
-		core->getCommandList()->SetGraphicsRootDescriptorTable(2, gpuHandle);
+	void apply(Core* core, int rootParameterIndex) {
+		core->getCommandList()->SetGraphicsRootDescriptorTable(rootParameterIndex, gpuHandle);
 	}
 
 	bool load(const std::string& filename) {
@@ -288,19 +292,20 @@ public:
 		core->device->CreateShaderResourceView(image->texture, &srvDesc, image->cpuHandle);
 	}
 
-	void applyImage(std::string name) {
-		applySampler();
-		// apply image
+	void applyImage(std::string name, int rootParameterIndex) {
 		Image* image = &images[name];
-		image->apply(core);
+		if (image == nullptr) {
+			return;
+		}
+		image->apply(core, rootParameterIndex);
 	}
 
 	void applySampler() {
 		// set descriptor heaps
 		ID3D12DescriptorHeap* heaps[] = { srvHeap, sampler.getHeap() };
-		core->getCommandList()->SetDescriptorHeaps(2, heaps);
+		core->getCommandList()->SetDescriptorHeaps(_countof(heaps), heaps);
 		// bind sampler (s0)
-		core->getCommandList()->SetGraphicsRootDescriptorTable(3, sampler.getHeap()->GetGPUDescriptorHandleForHeapStart());
+		core->getCommandList()->SetGraphicsRootDescriptorTable(SAMPLER_SLOT, sampler.getHeap()->GetGPUDescriptorHandleForHeapStart());
 	}
 
 	Image* getImage(std::string name) {

@@ -229,6 +229,9 @@ public:
 
 	std::string psoNames;
 	Image* diffuseTexture = nullptr;
+	bool useDiffuseTexture = false;
+	Image* normalTexture = nullptr;
+	bool useNormalTexture = false;
 
 	virtual void init(Core* core, void* vertices, int vertexSizeInBytes, int numVertices, unsigned int* indices, int numIndices)
 	{
@@ -294,26 +297,47 @@ public:
 		inputLayoutDesc = LayoutCache::getAnimatedLayout();
 	}
 
-	virtual void draw(Core* core)
+	virtual void draw(Core* core, Shader* shader)
 	{
-		bindTexture(core);
+		applyTexture(core, shader);
 		core->getCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		core->getCommandList()->IASetVertexBuffers(0, 1, &vbView);
 		core->getCommandList()->IASetIndexBuffer(&ibView);
 		core->getCommandList()->DrawIndexedInstanced(numMeshIndices, 1, 0, 0, 0);
 	}
 
-	void setTexture(Image* texture)
+	void setDiffuseTexture(Image* texture)
 	{
 		diffuseTexture = texture;
+		useDiffuseTexture = true;
 	}
 
-	void bindTexture(Core* core)
+	void setNormalTexture(Image* texture)
+	{
+		normalTexture = texture;
+		useNormalTexture = true;
+	}
+
+	void applyTexture(Core* core, Shader* shader)
 	{
 		if (diffuseTexture != nullptr)
 		{
-			diffuseTexture->apply(core);
+			diffuseTexture->apply(core, DIFFUSE_TEXTURE_SLOT);
 		}
+		else
+		{
+			bool useTex = false;
+		}
+		if (normalTexture != nullptr)
+		{
+			normalTexture->apply(core, NORMAL_TEXTURE_SLOT);
+		}
+		else
+		{
+			bool useNormalMap = false;
+		}
+		shader->updateConstantBuffer("basicPSBuffer", "useTexture", &useDiffuseTexture, PIXEL_SHADER);
+		shader->updateConstantBuffer("basicPSBuffer", "useNormalMap", &useNormalTexture, PIXEL_SHADER);
 	}
 };
 
@@ -486,6 +510,10 @@ public:
 	Animation animation;
 
 	PSOManager* psoManager;
+	
+	Vec3 position = Vec3(0, 0, 0);
+	Vec4 rotation = Vec4(0, 0, 0, 1); // Quaternion
+	Vec3 scale = Vec3(1, 1, 1);
 	Mat4 worldMatrix;
 
 	Object(PSOManager* psoMgr) : psoManager(psoMgr) {}
@@ -582,14 +610,31 @@ public:
 	void draw(Core* core) {
 		for (int i = 0; i < meshes.size(); i++) {
 			psoManager->set(core, meshes[i]->psoNames);
-			meshes[i]->draw(core);
+			meshes[i]->draw(core, psoManager->shaders[meshes[i]->psoNames]);
 		}
 	}
 
-	void setTexture(Image* texture) {
+	void setDiffuseTexture(Image* texture) {
 		for (int i = 0; i < meshes.size(); i++) {
-			meshes[i]->setTexture(texture);
+			meshes[i]->setDiffuseTexture(texture);
 		}
+	}
+
+	void setNormalTexture(Image* texture) {
+		for (int i = 0; i < meshes.size(); i++) {
+			meshes[i]->setNormalTexture(texture);
+		}
+	}
+
+	void updateWorldMatrix() {
+		Mat4 t = Mat4().Translate(position.v[0], position.v[1], position.v[2]);
+		Mat4 r = Mat4().rotationQuaternion(rotation.v[0], rotation.v[1], rotation.v[2], rotation.v[3]);
+		Mat4 s = Mat4().Scale(scale.v[0], scale.v[1], scale.v[2]);
+		worldMatrix = t * r * s;
+	}
+
+	Mat4* getWorldMatrix() {
+		return &worldMatrix;
 	}
 };
 
@@ -649,9 +694,9 @@ public:
 		memcpy(instanceCPUAddress, instanceData.data(), instanceCount * sizeof(InstanceData));
 	}
 
-	void drawInstanced(Core* core)
+	void drawInstanced(Core* core, Shader* shader)
 	{
-		mesh->bindTexture(core);
+		mesh->applyTexture(core, shader);
 		core->getCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		// slot 0 = vertex buffer, slot 1 = instance buffer
 		D3D12_VERTEX_BUFFER_VIEW views[2] = { mesh->vbView, instanceBufferView };
@@ -696,7 +741,9 @@ public:
 
 	void drawInstanced(Core* core) {
 		for (int i = 0; i < instancedMeshes.size(); i++) {
-			instancedMeshes[i]->drawInstanced(core);
+			psoManager->set(core, instancedMeshes[i]->mesh->psoNames);
+			instancedMeshes[i]->drawInstanced(core, psoManager->shaders[instancedMeshes[i]->mesh->psoNames]);
+			Shader* shader = psoManager->shaders[instancedMeshes[i]->mesh->psoNames];
 		}
 	}
 };

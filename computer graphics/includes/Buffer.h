@@ -96,6 +96,7 @@ class ConstantBuffer {
 public:
 	std::string name;
 	std::map<std::string, ConstantBufferVariable> constantBufferData;
+	std::map<std::string, void*> dataPointers;
 
 	ID3D12Resource* constantBuffer;
 	unsigned char* buffer;
@@ -138,6 +139,16 @@ public:
 		memcpy(&buffer[offset + cbVariable.offset], data, cbVariable.size);
 	}
 
+	void updateAll()
+	{
+		for (const auto& pair : dataPointers)
+		{
+			std::string name = pair.first;
+			void* pointer = pair.second;
+			update(name, pointer);
+		}
+	}
+
 	// get GPU virtual address
 	D3D12_GPU_VIRTUAL_ADDRESS getGPUAddress() const
 	{
@@ -152,5 +163,10 @@ public:
 		{
 			offsetIndex = 0;
 		}
+	}
+
+	void setValuePointer(std::string name, void* pointer)
+	{
+		dataPointers[name] = pointer;
 	}
 };

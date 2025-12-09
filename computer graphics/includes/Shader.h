@@ -120,6 +120,25 @@ public:
 		}
 	}
 
+	void updateAllConstantBuffers() {
+		for (auto& cb : vsConstantBuffers) {
+			cb.updateAll();
+		}
+		for (auto& cb : psConstantBuffers) {
+			cb.updateAll();
+		}
+	}
+
+	void setConstantBufferValuePointer(const std::string& cbName, std::string varName, void* pointer, enum ShaderType type) {
+		std::vector<ConstantBuffer>& buffers = (type == VERTEX_SHADER) ? vsConstantBuffers : psConstantBuffers;
+		for (auto& cb : buffers) {
+			if (cb.name == cbName) {
+				cb.setValuePointer(varName, pointer);
+				return;
+			}
+		}
+	}
+
 };
 
 
@@ -240,19 +259,32 @@ public:
 		rootParameterCBPS.Descriptor.RegisterSpace = 0;
 		rootParameterCBPS.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 		parameters.push_back(rootParameterCBPS);
-		// Register space for texture SRV
-		D3D12_DESCRIPTOR_RANGE srvRange = {};
-		srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		srvRange.NumDescriptors = 1;        // only t0
-		srvRange.BaseShaderRegister = 0;    // register(t0)
-		srvRange.RegisterSpace = 0;
-		srvRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-		D3D12_ROOT_PARAMETER rootParameterSRV = {};
-		rootParameterSRV.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		rootParameterSRV.DescriptorTable.NumDescriptorRanges = 1;
-		rootParameterSRV.DescriptorTable.pDescriptorRanges = &srvRange;
-		rootParameterSRV.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // typical for textures
-		parameters.push_back(rootParameterSRV);
+		// Register space for texture SRV t0
+		D3D12_DESCRIPTOR_RANGE srvRange0 = {};
+		srvRange0.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		srvRange0.NumDescriptors = 1;        // t0
+		srvRange0.BaseShaderRegister = 0;    // register(t0)
+		srvRange0.RegisterSpace = 0;
+		srvRange0.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		D3D12_ROOT_PARAMETER rootParameterSRV0 = {};
+		rootParameterSRV0.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParameterSRV0.DescriptorTable.NumDescriptorRanges = 1;
+		rootParameterSRV0.DescriptorTable.pDescriptorRanges = &srvRange0;
+		rootParameterSRV0.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // typical for textures
+		parameters.push_back(rootParameterSRV0);
+		// Register space for texture SRV t0
+		D3D12_DESCRIPTOR_RANGE srvRange1 = {};
+		srvRange1.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		srvRange1.NumDescriptors = 1;        // t1
+		srvRange1.BaseShaderRegister = 1;    // register(t1)
+		srvRange1.RegisterSpace = 0;
+		srvRange1.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		D3D12_ROOT_PARAMETER rootParameterSRV1 = {};
+		rootParameterSRV1.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParameterSRV1.DescriptorTable.NumDescriptorRanges = 1;
+		rootParameterSRV1.DescriptorTable.pDescriptorRanges = &srvRange1;
+		rootParameterSRV1.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // typical for textures
+		parameters.push_back(rootParameterSRV1);
 		// Register space for sampler
 		D3D12_DESCRIPTOR_RANGE samplerRange = {};
 		samplerRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
@@ -327,5 +359,21 @@ public:
 	void updateConstantBuffer(const std::string& shaderName, const std::string& cbName, std::string varName, void* data, enum ShaderType type) {
 		Shader* shader = shaders[shaderName];
 		shader->updateConstantBuffer(cbName, varName, data, type);
+	}
+
+	void updateAllConstantBuffers(const std::string& shaderName) {
+		Shader* shader = shaders[shaderName];
+		shader->updateAllConstantBuffers();
+	}
+
+	void updateAllConstantBuffers() {
+		for (auto& sd : shaders) {
+			sd.second->updateAllConstantBuffers();
+		}
+	}
+
+	void setConstantBufferValuePointer(const std::string& shaderName, const std::string& cbName, std::string varName, void* pointer, enum ShaderType type) {
+		Shader* shader = shaders[shaderName];
+		shader->setConstantBufferValuePointer(cbName, varName, pointer, type);
 	}
 };

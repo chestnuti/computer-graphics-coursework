@@ -71,16 +71,7 @@ public:
 		float y = rotationFactor.v[1];
 		float z = rotationFactor.v[2];
 		float w = rotationFactor.v[3];
-		Mat4 rotation;
-		rotation.m[0][0] = 1 - 2 * y * y - 2 * z * z;
-		rotation.m[0][1] = 2 * x * y - 2 * z * w;
-		rotation.m[0][2] = 2 * x * z + 2 * y * w;
-		rotation.m[1][0] = 2 * x * y + 2 * z * w;
-		rotation.m[1][1] = 1 - 2 * x * x - 2 * z * z;
-		rotation.m[1][2] = 2 * y * z - 2 * x * w;
-		rotation.m[2][0] = 2 * x * z - 2 * y * w;
-		rotation.m[2][1] = 2 * y * z + 2 * x * w;
-		rotation.m[2][2] = 1 - 2 * x * x - 2 * y * y;
+		Mat4 rotation = Mat4().rotationQuaternion(x, y, z, w);
 		// translation
 		Vec3 position = interpolate(frames[baseFrame].positions[boneIndex], frames[nextFrame(baseFrame)].positions[boneIndex], interpolationFact);
 		Mat4 translation = Mat4().Translate(position.v[0], position.v[1], position.v[2]);

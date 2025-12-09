@@ -35,7 +35,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	// Load images
 	ImageLoader imageLoader(&core);
+	imageLoader.loadImage("Blank", "Models/Textures/Textures1_NH.png");
 	imageLoader.loadImage("Trex", "Models/Trex/Textures/T-rex_Base_Color_ALB.png");
+	imageLoader.loadImage("TrexNormal", "Models/Trex/Textures/T-rex_Base_Color_NH.png");
 	imageLoader.loadImage("Sky", "Models/Textures/sky.png");
 	imageLoader.loadImage("Ground", "Models/Textures/aerial_rocks_04_diff_4k.png");
 	imageLoader.loadImage("ColorMap", "Models/LowPolyMilitary/Textures/Textures1_ALB.png");
@@ -43,17 +45,26 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	// Load mesh
 	Object trex(&psos);
 	trex.loadGEM(&core, "Models/Trex/TRex.gem", "animatedPSO");
-	trex.setTexture(imageLoader.getImage("Trex"));
+	trex.setDiffuseTexture(imageLoader.getImage("Trex"));
+	trex.setNormalTexture(imageLoader.getImage("TrexNormal"));
 	Object grass(&psos);
-	grass.loadGEM(&core, "Models/LowPolyMilitary/grass_003.gem", "basicPSO");
-	grass.setTexture(imageLoader.getImage("ColorMap"));
+	grass.loadGEM(&core, "Models/LowPolyMilitary/grass_003.gem", "instancedPSO");
+	grass.setDiffuseTexture(imageLoader.getImage("ColorMap"));
+
 
 	Sphere sphere;
 	sphere.init(&core, 20, 20, 1.0f);
-	sphere.setTexture(imageLoader.getImage("Sky"));
+	sphere.psoNames = "skyboxPSO";
+	sphere.setDiffuseTexture(imageLoader.getImage("Sky"));
+
 	Plane plane;
 	plane.init(&core, 30.0f);
-	plane.setTexture(imageLoader.getImage("Ground"));
+	plane.psoNames = "basicPSO";
+	plane.setDiffuseTexture(imageLoader.getImage("Ground"));
+
+	Object otherObjects(&psos);
+	otherObjects.meshes.push_back(&plane);
+
 
 	// Create cube instances
 	Cube cube;
@@ -94,13 +105,26 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	
 	// params
 	float time = 0.0f;
-
-	Mat4 W = Mat4()._Identity();
 	Mat4 VP = camera.getViewProjectionMatrix();
 	Mat4 W2 = Mat4()._Identity();
 	Mat4 skyboxBuffer_W;
-
 	float animationTransition = 0.0f;
+	Vec4 lightDirection = Vec4(0.0f, -1.0f, -1.0f, 0.0f).normalize();
+
+	// set constant buffer pointers
+	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "bones", sequencer.getBoneMatrices(), VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "W", trex.getWorldMatrix(), VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "VP", &VP, VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("skyboxShader", "skyboxBuffer", "W", &skyboxBuffer_W, VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("skyboxShader", "skyboxBuffer", "VP", &VP, VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
+
+	shaderManager.setConstantBufferValuePointer("animatedShader", "basicPSBuffer", "lightDirection", &lightDirection, PIXEL_SHADER);
+	shaderManager.setConstantBufferValuePointer("basicShader", "basicPSBuffer", "lightDirection", &lightDirection, PIXEL_SHADER);
+	shaderManager.setConstantBufferValuePointer("instancedShader", "basicPSBuffer", "lightDirection", &lightDirection, PIXEL_SHADER);
 
 	while (true) {
 		core.beginFrame();
@@ -115,29 +139,21 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		// camera controls
 		camera.control(&win, dt);
 
-		// rotate cube over time
-		W *= Mat4().Translate(0.0f, 0.0f, 0.05f * remap_clamp(10.0f - time, 0.0f, 10.0f, 0.0f, 1.0f));
+		// update parameters
+		trex.position.v[2] += 0.05f * remap_clamp(10.0f - time, 0.0f, 10.0f, 0.0f, 1.0f);
+		trex.updateWorldMatrix();
 		VP = camera.getViewProjectionMatrix();
 		skyboxBuffer_W = Mat4().Translate(camera.position.v[0], camera.position.v[1], camera.position.v[2]) * Mat4().Scale(camera.clipFar - 1, camera.clipFar - 1, camera.clipFar - 1);
 
-		// update constant buffer
-		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "W", &W, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "VP", &VP, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("basicShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("skyboxShader", "skyboxBuffer", "W", &skyboxBuffer_W, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("skyboxShader", "skyboxBuffer", "VP", &VP, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("instancedShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
-		shaderManager.updateConstantBuffer("instancedShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
-
 		//update animation
 		stateMachine.update(time, dt);
-		shaderManager.updateConstantBuffer("animatedShader", "animatedMeshBuffer", "bones", sequencer.getBoneMatrices(), VERTEX_SHADER);
+
+		// update shader constant buffers
+		shaderManager.updateAllConstantBuffers();
 
 		// update instance buffer
 		instancedObject.updateInstances(instanceDatas);
 
-		
 		core.beginRenderPass();
 
 		imageLoader.applySampler();
@@ -146,17 +162,20 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		trex.draw(&core);
 
 		// draw instances
-		psos.set(&core, "instancedPSO");
 		instancedObject.drawInstanced(&core);
 
+		bool useTex = false;
+		shaderManager.shaders["basicShader"]->updateConstantBuffer("basicPSBuffer", "useNormalMap", &useTex, PIXEL_SHADER);
+		otherObjects.draw(&core);
+
 		// draw cube
-		psos.set(&core, "basicPSO");
-		plane.draw(&core);
+		//psos.set(&core, "basicPSO");
+		//plane.draw(&core, shaderManager.shaders["basicShader"]);
 
 
 		// draw skybox
 		psos.set(&core, "skyboxPSO");
-		sphere.draw(&core);
+		sphere.draw(&core, shaderManager.shaders["skyboxShader"]);
 		
 		core.finishFrame();
 	}

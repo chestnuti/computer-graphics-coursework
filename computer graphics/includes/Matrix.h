@@ -218,4 +218,19 @@ public:
 		return inv;
 	}
 
+	Mat4 rotationQuaternion(float x, float y, float z, float w)
+	{
+		Mat4 rotation;
+		rotation.m[0][0] = 1 - 2 * y * y - 2 * z * z;
+		rotation.m[0][1] = 2 * x * y - 2 * z * w;
+		rotation.m[0][2] = 2 * x * z + 2 * y * w;
+		rotation.m[1][0] = 2 * x * y + 2 * z * w;
+		rotation.m[1][1] = 1 - 2 * x * x - 2 * z * z;
+		rotation.m[1][2] = 2 * y * z - 2 * x * w;
+		rotation.m[2][0] = 2 * x * z - 2 * y * w;
+		rotation.m[2][1] = 2 * y * z + 2 * x * w;
+		rotation.m[2][2] = 1 - 2 * x * x - 2 * y * y;
+		return rotation;
+	}
+
 };
