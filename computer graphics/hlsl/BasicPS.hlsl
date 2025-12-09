@@ -31,13 +31,13 @@ float4 PS(PS_INPUT input) : SV_Target0
         float3x3 TBN = float3x3(T, B, N);
         float3 modifiedNormal = normalize(mul(normalMap, TBN));
         float lightIntensity = saturate(dot(modifiedNormal, -lightDirection.xyz));
-        texColor.rgb *= lightIntensity;
+        texColor.rgb *= lightIntensity * 1.2 + 0.2;
     }
     else
     {
         float3 N = normalize(input.Normal);
         float lightIntensity = saturate(dot(N, -lightDirection.xyz));
-        texColor.rgb *= lightIntensity;
+        texColor.rgb *= lightIntensity * 1.2 + 0.2;
     }
     if (texColor.a < 0.5)
     {

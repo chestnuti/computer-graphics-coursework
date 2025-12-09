@@ -337,5 +337,18 @@ public:
 		}
 		// Update sequencer
 		sequencer->update(dt);
+
+		// Reset transition time and weight if no queued states
+		if (stateList.size() == 0) {
+			transTime = 0.0f;
+			sequencer->clearWeights();
+			int currentIndex = getStateIndex(currentState);
+			if (currentIndex != -1) {
+				sequencer->setWeight(currentIndex, 1.0f);
+			}
+		}
+
+		// Debug output
+		DebugPrint("Current State: " + currentState + ", Next States: " + std::to_string(stateList.size()) + ", Transition Time: " + std::to_string(transTime));
 	}
 };

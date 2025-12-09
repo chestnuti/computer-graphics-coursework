@@ -117,9 +117,9 @@ public:
 		position.v[2] = target.v[2] + radius * sinf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
 
 		// debug output
-		DebugPrint("Camera position: (" + std::to_string(position.v[0]) + ", " + std::to_string(position.v[1]) + ", " + std::to_string(position.v[2]) + ")");
+		/*DebugPrint("Camera position: (" + std::to_string(position.v[0]) + ", " + std::to_string(position.v[1]) + ", " + std::to_string(position.v[2]) + ")");
 		DebugPrint("Camera target: (" + std::to_string(target.v[0]) + ", " + std::to_string(target.v[1]) + ", " + std::to_string(target.v[2]) + ")");
-		DebugPrint("Camera forward: (" + std::to_string(getForwardVector().v[0]) + ", " + std::to_string(getForwardVector().v[1]) + ", " + std::to_string(getForwardVector().v[2]) + ")");
+		DebugPrint("Camera forward: (" + std::to_string(getForwardVector().v[0]) + ", " + std::to_string(getForwardVector().v[1]) + ", " + std::to_string(getForwardVector().v[2]) + ")");*/
 	}
 
 	void bindTragetAt(Vec3 at)

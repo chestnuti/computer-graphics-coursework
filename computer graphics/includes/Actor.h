@@ -88,9 +88,17 @@ public:
 		camera->control(win, dt);
 		camera->bindTragetAt(position + Vec3(0.0f, 4.0f, 0.0f));
 		// when any movement key is pressed, update forward and right vector
-		if (win->keys['W'] || win->keys['A'] || win->keys['S'] || win->keys['D'] || win->keys['Q'] || win->keys['E']) {
-			speed += 50.0f * dt;
-			if (speed > 10.0f) speed = 10.0f;
+		if (win->keys['W'] || win->keys['A'] || win->keys['S'] || win->keys['D']) {
+			if (win->keys[VK_SHIFT]) {
+				// running
+				speed += 20.0f * dt;
+				if (speed > 12.0f) speed = 12.0f;
+			}
+			else {
+				// walking
+				speed += 10.0f * dt;
+				if (speed > 5.0f) speed = 5.0f;
+			}
 			if (win->keys['W']) forward += camera->getForwardVector();
 			if (win->keys['S']) forward -= camera->getForwardVector();
 			if (win->keys['A']) forward -= camera->getRightVector();
@@ -109,7 +117,7 @@ public:
 		position += forward * dt * speed;
 
 		// change state based on speed
-		if (speed > 6.0f) {
+		if (speed > 5.0f) {
 			stateMachine->transitionTo("run", 0.2f);
 		}
 		else if (speed > 0.1f) {

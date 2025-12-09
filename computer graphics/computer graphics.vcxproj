@@ -131,8 +131,10 @@
     <ClInclude Include="includes\Buffer.h" />
     <ClInclude Include="includes\Camera.h" />
     <ClInclude Include="includes\Core.h" />
+    <ClInclude Include="includes\EventBus.h" />
     <ClInclude Include="includes\GamesEngineeringBase.h" />
     <ClInclude Include="includes\GEMLoader.h" />
+    <ClInclude Include="includes\Hitbox.h" />
     <ClInclude Include="includes\Image.h" />
     <ClInclude Include="includes\Matrix.h" />
     <ClInclude Include="includes\Mesh.h" />

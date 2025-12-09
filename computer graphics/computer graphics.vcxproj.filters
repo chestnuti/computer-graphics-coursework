@@ -57,6 +57,12 @@
     <ClInclude Include="includes\Actor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="includes\Hitbox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\EventBus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

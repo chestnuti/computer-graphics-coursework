@@ -40,8 +40,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	// Load images
 	ImageLoader imageLoader(&core);
 	imageLoader.loadImage("Blank", "Models/Textures/Textures1_NH.png");
-	//imageLoader.loadImage("Trex", "Models/Trex/Textures/T-rex_Base_Color_ALB.png");
-	//imageLoader.loadImage("TrexNormal", "Models/Trex/Textures/T-rex_Base_Color_NH.png");
 	imageLoader.loadImage("Sky", "Models/Textures/sky.png");
 	imageLoader.loadImage("Ground", "Models/Textures/aerial_rocks_04_diff_4k.png");
 	imageLoader.loadImage("Ground_Normal", "Models/Textures/aerial_rocks_04_nor_dx_4k.png");
@@ -50,11 +48,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	imageLoader.loadImage("AnimalsNormalMap", "Models/AnimatedLowPolyAnimals/Textures/T_Animalstextures_nh.png");
 
 	// Load mesh
-	/*Object trex(&psos);
-	trex.loadGEM(&core, "Models/Trex/TRex.gem", "animatedPSO");
-	trex.setDiffuseTexture(imageLoader.getImage("Trex"));
-	trex.setNormalTexture(imageLoader.getImage("TrexNormal"));*/
-
 	Object player(&psos);
 	player.loadGEM(&core, "Models/AnimatedLowPolyAnimals/Farmer-male.gem", "animatedPSO");
 	player.setDiffuseTexture(imageLoader.getImage("AnimalsColorMap"));
@@ -97,8 +90,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		InstanceData inst;
 		float randX = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 60.0f;
 		float randZ = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 60.0f;
+		float randRotation = ((float)(rand() % 1000) / 1000.0f) * 360.0f;
 		float randScale = ((float)(rand() % 1000) / 1000.0f) * 0.01f + 0.005f;
-		inst.World = Mat4().Translate(randX, 0, randZ) * Mat4().Scale(randScale, randScale, randScale);
+		inst.World = Mat4().Translate(randX, 0, randZ) * Mat4().RotateY(randRotation) * Mat4().Scale(randScale, randScale, randScale);
 		inst.World = inst.World.Transpose();
 		inst.Color = Vec4(1, 1, 1, 1);
 		instanceDatas.push_back(inst);
@@ -106,14 +100,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	InstancedObject instancedObject(&psos);
 	instancedObject.init(&core, &grass, instanceDatas);
-
-
-	// Create secquencer
-	/*Sequencer sequencer;
-	sequencer.addItem(&trex.animation, "Run", 0.0f, 0.0f, 1.0f);
-	sequencer.addItem(&trex.animation, "walk", 0.0f, 0.0f, 1.0f);
-	sequencer.addItem(&trex.animation, "Idle", 0.0f, 0.0f, 1.0f);
-	sequencer.addItem(&trex.animation, "attack", 0.0f, 0.0f, 1.0f);*/
 	
 	// params
 	float time = 0.0f;
@@ -149,12 +135,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		time += dt;
 
 		// update parameters
-		//player.position.v[2] += 0.05f * remap_clamp(10.0f - time, 0.0f, 10.0f, 0.0f, 1.0f);
-		//player.updateWorldMatrix();
 		playerActor.update(dt);
 		VP = camera.getViewProjectionMatrix();
 		skyboxBuffer_W = Mat4().Translate(camera.position.v[0], camera.position.v[1], camera.position.v[2]) * Mat4().Scale(camera.clipFar - 1, camera.clipFar - 1, camera.clipFar - 1);
-
 
 		// update shader constant buffers
 		shaderManager.updateAllConstantBuffers();
@@ -164,6 +147,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 		core.beginRenderPass();
 
+
+		// set samplers
 		imageLoader.applySampler();
 
 		// draw models
@@ -171,9 +156,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 		// draw instances
 		instancedObject.drawInstanced(&core);
-
-		bool useTex = false;
-		shaderManager.shaders["basicShader"]->updateConstantBuffer("basicPSBuffer", "useNormalMap", &useTex, PIXEL_SHADER);
 
 		// draw other objects
 		otherObjects.draw(&core);
