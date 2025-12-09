@@ -138,7 +138,7 @@ STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
 	STATIC_VERTEX v;
 	v.pos = p;
 	v.normal = n;
-	v.tangent = Vec3(0, 0, 0); // For now
+	v.tangent = anyOrthogonal(n).normalize();
 	v.uv[0] = tu;
 	v.uv[1] = tv;
 	return v;
@@ -503,6 +503,7 @@ public:
 };
 
 
+enum axis { X_AXIS, Y_AXIS, Z_AXIS };
 
 class Object{
 public:
@@ -635,6 +636,37 @@ public:
 
 	Mat4* getWorldMatrix() {
 		return &worldMatrix;
+	}
+
+	void move(Vec3 delta) {
+		position = position + delta;
+	}
+
+	void rotate(Vec3 delta) {
+		rotation.v[0] += delta.v[0];
+		rotation.v[1] += delta.v[1];
+		rotation.v[2] += delta.v[2];
+		rotation = rotation.normalize();
+	}
+
+	void rotateBy(float angleInDegrees, axis rotAxis) {
+		float halfAngleRad = (angleInDegrees * M_PI / 180.0f) / 2.0f;
+		float sinHalfAngle = sinf(halfAngleRad);
+		Vec4 q;
+		if (rotAxis == X_AXIS)
+			q = Vec4(sinHalfAngle, 0, 0, cosf(halfAngleRad));
+		else if (rotAxis == Y_AXIS)
+			q = Vec4(0, sinHalfAngle, 0, cosf(halfAngleRad));
+		else // Z_AXIS
+			q = Vec4(0, 0, sinHalfAngle, cosf(halfAngleRad));
+		rotation = rotation.quatMultiply(q);
+		rotation = rotation.normalize();
+	}
+
+	void sale(Vec3 scaleFactor) {
+		scale = Vec3(scale.v[0] * scaleFactor.v[0],
+			scale.v[1] * scaleFactor.v[1],
+			scale.v[2] * scaleFactor.v[2]);
 	}
 };
 

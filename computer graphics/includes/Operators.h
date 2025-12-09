@@ -64,3 +64,31 @@ t perspectiveCorrectInterpolateAttribute(t a0, t a1, t a2, float v0_w, float v1_
 	attrib[2] = a2 * gamma * v2_w;
 	return ((attrib[0] + attrib[1] + attrib[2]) / frag_w);
 }
+
+
+Vec3 anyOrthogonal(Vec3 vec) {
+	if (abs(vec.v[0]) > abs(vec.v[2]))
+		return Vec3(-vec.v[1], vec.v[0], 0.0);
+	else
+		return Vec3(0.0, -vec.v[2], vec.v[1]);
+}
+
+
+
+Vec4 quatFromTo(Vec3 a, Vec3 b) {
+	Vec3 u = a.normalize();
+	Vec3 v = b.normalize();
+	float c = u.Dot(v);
+
+	if (c > 0.999999) {
+		return Vec4(0, 0, 0, 1);
+	}
+	if (c < -0.999999) {
+		Vec3 axis = anyOrthogonal(u).normalize();
+		return Vec4(axis.v[0], axis.v[1], axis.v[2], 0); // 180бу
+	}
+
+	Vec3 w = v.cross(u);
+	Vec4 q(w.v[0], w.v[1], w.v[2], 1 + c);
+	return q.normalize();
+}

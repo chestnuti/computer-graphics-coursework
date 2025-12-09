@@ -6,6 +6,7 @@
 #include "./includes/Matrix.h"
 #include "./includes/Camera.h"
 #include "./includes/Image.h"
+#include "./includes/Actor.h"
 #include "./includes/GamesEngineeringBase.h"
 #include "./includes/GEMLoader.h"
 
@@ -19,6 +20,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Core core;
 	core.init(win.hwnd, win.width, win.height);
 	GamesEngineeringBase::Timer timer;
+
+	// Create camera
+	Camera camera;
 
 	ShaderManager shaderManager;
 	shaderManager.createShader(&core, "animatedShader", "./hlsl/AnimatedVS.hlsl", "./hlsl/BasicPS.hlsl");
@@ -36,22 +40,38 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	// Load images
 	ImageLoader imageLoader(&core);
 	imageLoader.loadImage("Blank", "Models/Textures/Textures1_NH.png");
-	imageLoader.loadImage("Trex", "Models/Trex/Textures/T-rex_Base_Color_ALB.png");
-	imageLoader.loadImage("TrexNormal", "Models/Trex/Textures/T-rex_Base_Color_NH.png");
+	//imageLoader.loadImage("Trex", "Models/Trex/Textures/T-rex_Base_Color_ALB.png");
+	//imageLoader.loadImage("TrexNormal", "Models/Trex/Textures/T-rex_Base_Color_NH.png");
 	imageLoader.loadImage("Sky", "Models/Textures/sky.png");
 	imageLoader.loadImage("Ground", "Models/Textures/aerial_rocks_04_diff_4k.png");
+	imageLoader.loadImage("Ground_Normal", "Models/Textures/aerial_rocks_04_nor_dx_4k.png");
 	imageLoader.loadImage("ColorMap", "Models/LowPolyMilitary/Textures/Textures1_ALB.png");
+	imageLoader.loadImage("AnimalsColorMap", "Models/AnimatedLowPolyAnimals/Textures/T_Animalstextures_alb.png");
+	imageLoader.loadImage("AnimalsNormalMap", "Models/AnimatedLowPolyAnimals/Textures/T_Animalstextures_nh.png");
 
 	// Load mesh
-	Object trex(&psos);
+	/*Object trex(&psos);
 	trex.loadGEM(&core, "Models/Trex/TRex.gem", "animatedPSO");
 	trex.setDiffuseTexture(imageLoader.getImage("Trex"));
-	trex.setNormalTexture(imageLoader.getImage("TrexNormal"));
+	trex.setNormalTexture(imageLoader.getImage("TrexNormal"));*/
+
+	Object player(&psos);
+	player.loadGEM(&core, "Models/AnimatedLowPolyAnimals/Farmer-male.gem", "animatedPSO");
+	player.setDiffuseTexture(imageLoader.getImage("AnimalsColorMap"));
+	//player.setNormalTexture(imageLoader.getImage("AnimalsNormalMap"));
+	player.rotateBy(90.0f, X_AXIS);
+	player.rotateBy(180.0f, Z_AXIS);
+	player.scale = Vec3(0.05f, 0.05f, 0.05f);
+	Player playerActor(&win);
+	playerActor.init(&player);
+	playerActor.bindCamera(&camera);
+
+	// Load grass
 	Object grass(&psos);
 	grass.loadGEM(&core, "Models/LowPolyMilitary/grass_003.gem", "instancedPSO");
 	grass.setDiffuseTexture(imageLoader.getImage("ColorMap"));
 
-
+	// skybox and ground
 	Sphere sphere;
 	sphere.init(&core, 20, 20, 1.0f);
 	sphere.psoNames = "skyboxPSO";
@@ -61,9 +81,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	plane.init(&core, 30.0f);
 	plane.psoNames = "basicPSO";
 	plane.setDiffuseTexture(imageLoader.getImage("Ground"));
+	plane.setNormalTexture(imageLoader.getImage("Ground_Normal"));
 
 	Object otherObjects(&psos);
 	otherObjects.meshes.push_back(&plane);
+	otherObjects.meshes.push_back(&sphere);
 
 
 	// Create cube instances
@@ -87,21 +109,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 
 	// Create secquencer
-	Sequencer sequencer;
+	/*Sequencer sequencer;
 	sequencer.addItem(&trex.animation, "Run", 0.0f, 0.0f, 1.0f);
 	sequencer.addItem(&trex.animation, "walk", 0.0f, 0.0f, 1.0f);
 	sequencer.addItem(&trex.animation, "Idle", 0.0f, 0.0f, 1.0f);
-	sequencer.addItem(&trex.animation, "attack", 0.0f, 0.0f, 1.0f);
-
-	//Create State Machine
-	StateMachine stateMachine(&sequencer);
-	stateMachine.setCurrentState("Run");
-	stateMachine.transitionTo("walk", 5.0f);
-	stateMachine.transitionTo("Idle", 5.0f);
-	stateMachine.transitionTo("attack", 1.0f);
-	
-	// Create camera
-	Camera camera;
+	sequencer.addItem(&trex.animation, "attack", 0.0f, 0.0f, 1.0f);*/
 	
 	// params
 	float time = 0.0f;
@@ -112,8 +124,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Vec4 lightDirection = Vec4(0.0f, -1.0f, -1.0f, 0.0f).normalize();
 
 	// set constant buffer pointers
-	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "bones", sequencer.getBoneMatrices(), VERTEX_SHADER);
-	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "W", trex.getWorldMatrix(), VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "bones", playerActor.getBoneMatrices(), VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "W", playerActor.getWorldMatrix(), VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "VP", &VP, VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
@@ -136,17 +148,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		float dt = timer.dt();
 		time += dt;
 
-		// camera controls
-		camera.control(&win, dt);
-
 		// update parameters
-		trex.position.v[2] += 0.05f * remap_clamp(10.0f - time, 0.0f, 10.0f, 0.0f, 1.0f);
-		trex.updateWorldMatrix();
+		//player.position.v[2] += 0.05f * remap_clamp(10.0f - time, 0.0f, 10.0f, 0.0f, 1.0f);
+		//player.updateWorldMatrix();
+		playerActor.update(dt);
 		VP = camera.getViewProjectionMatrix();
 		skyboxBuffer_W = Mat4().Translate(camera.position.v[0], camera.position.v[1], camera.position.v[2]) * Mat4().Scale(camera.clipFar - 1, camera.clipFar - 1, camera.clipFar - 1);
 
-		//update animation
-		stateMachine.update(time, dt);
 
 		// update shader constant buffers
 		shaderManager.updateAllConstantBuffers();
@@ -159,23 +167,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		imageLoader.applySampler();
 
 		// draw models
-		trex.draw(&core);
+		player.draw(&core);
 
 		// draw instances
 		instancedObject.drawInstanced(&core);
 
 		bool useTex = false;
 		shaderManager.shaders["basicShader"]->updateConstantBuffer("basicPSBuffer", "useNormalMap", &useTex, PIXEL_SHADER);
+
+		// draw other objects
 		otherObjects.draw(&core);
-
-		// draw cube
-		//psos.set(&core, "basicPSO");
-		//plane.draw(&core, shaderManager.shaders["basicShader"]);
-
-
-		// draw skybox
-		psos.set(&core, "skyboxPSO");
-		sphere.draw(&core, shaderManager.shaders["skyboxShader"]);
 		
 		core.finishFrame();
 	}

@@ -180,6 +180,8 @@ public:
 	std::vector<Item> items;
 	Mat4 matrices[256];
 
+	float globalTime = 0;
+
 	Sequencer() : totalWeight(0.0f) {}
 
 	void addItem(Animation* animation, std::string name, float weight, float startTime, float speed) {
@@ -194,7 +196,8 @@ public:
 		totalWeight += weight;
 	}
 
-	void update(float globalTime, float dt) {
+	void update(float dt) {
+		globalTime += dt;
 		for (int i = 0; i < items.size(); i++) {
 			if (globalTime >= items[i].startTime) {
 				items[i].animationInstance->update(items[i].animationName, dt * items[i].speed);
@@ -255,7 +258,7 @@ public:
 	std::string currentState;
 	std::vector<std::string> stateList;
 	std::vector<float> transitionTimes;
-	float transTime;
+	float transTime;	// remaining time for current transition
 
 	StateMachine(Sequencer* seq) : sequencer(seq), currentState(""), transTime(0.0f) {}
 
@@ -268,11 +271,19 @@ public:
 		return -1;
 	}
 
+	// add a state transition to the queue
 	void transitionTo(std::string state, float time) {
+		// check if state exists in sequencer
+		int index = getStateIndex(state);
+		if (index == -1) return;
+		// if last state is same as new state, ignore
+		if (stateList.size() > 0 && stateList.back() == state) return;
+		if (currentState == state) return;
 		stateList.push_back(state);
 		transitionTimes.push_back(time);
 	}
 
+	// set current state immediately, clearing any queued transitions
 	void setCurrentState(std::string state) {
 		currentState = state;
 		stateList.clear();
@@ -283,7 +294,7 @@ public:
 		}
 	}
 
-	void update(float globalTime, float dt) {
+	void update(float dt) {
 		// No states to process
 		if (stateList.size() != 0) {
 			// First time setup
@@ -325,6 +336,6 @@ public:
 			}
 		}
 		// Update sequencer
-		sequencer->update(globalTime, dt);
+		sequencer->update(dt);
 	}
 };

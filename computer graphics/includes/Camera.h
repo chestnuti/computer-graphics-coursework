@@ -15,7 +15,7 @@ public:
 	float clipNear;
 	float clipFar;
 
-	Camera() : position(0.0f, 3.0f, 3.0f), target(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), fov(90.0f), clipNear(0.01f), clipFar(100.0f) {
+	Camera() : position(0.0f, 10.0f, 3.0f), target(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), fov(90.0f), clipNear(0.01f), clipFar(100.0f) {
 	}
 
 	Mat4 getLookatMatrix()
@@ -72,13 +72,13 @@ public:
 	}
 
 	void control(Window* win, float dt) {
-		static float speed = 10.0f;
+		/*static float speed = 10.0f;
 		if (win->keys['W']) position += getForwardVector() * dt * speed;
 		if (win->keys['S']) position -= getForwardVector() * dt * speed;
 		if (win->keys['A']) position -= getRightVector() * dt * speed;
 		if (win->keys['D']) position += getRightVector() * dt * speed;
 		if (win->keys['Q']) position -= up * dt * speed;
-		if (win->keys['E']) position += up * dt * speed;
+		if (win->keys['E']) position += up * dt * speed;*/
 		// mouse look
 		float sensitivity = 0.1f;
 		float xoffset = win->mousex * sensitivity;
@@ -88,7 +88,7 @@ public:
 			yoffset = 0.0f;
 		}*/
 		// update yaw and pitch
-		static float yaw = -90.0f;
+		/*static float yaw = -90.0f;
 		static float pitch = 0.0f;
 		yaw += xoffset;
 		pitch -= yoffset;
@@ -100,7 +100,31 @@ public:
 		front.v[0] = cosf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
 		front.v[1] = sinf(pitch * (float)M_PI / 180.0f);
 		front.v[2] = sinf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
-		target = position + front.normalize();
+		target = position + front.normalize();*/
+
+		// rotate around target
+		static float yaw = 0.0f;
+		static float pitch = 20.0f;
+		yaw += xoffset;
+		pitch += yoffset;
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+		float radius = 5.0f;
+		position.v[0] = target.v[0] + radius * cosf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
+		position.v[1] = target.v[1] + radius * sinf(pitch * (float)M_PI / 180.0f);
+		position.v[2] = target.v[2] + radius * sinf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
+
+		// debug output
+		DebugPrint("Camera position: (" + std::to_string(position.v[0]) + ", " + std::to_string(position.v[1]) + ", " + std::to_string(position.v[2]) + ")");
+		DebugPrint("Camera target: (" + std::to_string(target.v[0]) + ", " + std::to_string(target.v[1]) + ", " + std::to_string(target.v[2]) + ")");
+		DebugPrint("Camera forward: (" + std::to_string(getForwardVector().v[0]) + ", " + std::to_string(getForwardVector().v[1]) + ", " + std::to_string(getForwardVector().v[2]) + ")");
+	}
+
+	void bindTragetAt(Vec3 at)
+	{
+		target = at;
 	}
 
 };

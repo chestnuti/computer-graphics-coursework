@@ -73,7 +73,6 @@ public:
 			v1.v[2] * v[0] - v1.v[0] * v[2],
 			v1.v[0] * v[1] - v1.v[1] * v[0]);
 	}
-
 };
 
 float Dot(const Vec3& v1, const Vec3& v2)
@@ -172,6 +171,24 @@ public:
 		result.v[2] = mat.m[2][0] * v[0] + mat.m[2][1] * v[1] + mat.m[2][2] * v[2] + mat.m[2][3] * v[3];
 		result.v[3] = mat.m[3][0] * v[0] + mat.m[3][1] * v[1] + mat.m[3][2] * v[2] + mat.m[3][3] * v[3];
 		return result;
+	}
+
+	Vec4 quatMultiply(const Vec4& q) const
+	{
+		return Vec4(
+			v[3] * q.v[0] + v[0] * q.v[3] + v[1] * q.v[2] - v[2] * q.v[1],
+			v[3] * q.v[1] - v[0] * q.v[2] + v[1] * q.v[3] + v[2] * q.v[0],
+			v[3] * q.v[2] + v[0] * q.v[1] - v[1] * q.v[0] + v[2] * q.v[3],
+			v[3] * q.v[3] - v[0] * q.v[0] - v[1] * q.v[1] - v[2] * q.v[2]
+		);
+	}
+
+	Vec4 toQuaternion(Vec3 vec) const
+	{
+		Vec3 norm = vec.normalize();
+		float angle = acosf(norm.v[2]);
+		float s = sinf(angle / 2.0f);
+		return Vec4(norm.v[1] * s, -norm.v[0] * s, 0.0f, cosf(angle / 2.0f));
 	}
 
 };
