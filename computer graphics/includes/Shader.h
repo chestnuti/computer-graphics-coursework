@@ -68,7 +68,7 @@ public:
 			D3D12_SHADER_BUFFER_DESC cbDesc;
 			constantBuffer->GetDesc(&cbDesc);
 			ConstantBuffer buffer;
-			buffer.init(core, cbDesc.Size, 1);
+			buffer.init(core, cbDesc.Size);
 			buffer.name = cbDesc.Name;
 			unsigned int totalSize = 0;
 			// Iterate over variables in constant buffer
@@ -98,7 +98,6 @@ public:
 		for (int i = 0; i < vsConstantBuffers.size(); i++) 
 		{
 			core->getCommandList()->SetGraphicsRootConstantBufferView(i, vsConstantBuffers[i].getGPUAddress());
-			vsConstantBuffers[i].next();
 		}
 
 		// bind PS constant buffers, starting after VS CBVs
@@ -106,8 +105,16 @@ public:
 		for (int i = 0; i < psConstantBuffers.size(); i++) 
 		{
 			core->getCommandList()->SetGraphicsRootConstantBufferView(psStartIndex + i, psConstantBuffers[i].getGPUAddress());
-			psConstantBuffers[i].next();
 		}
+	}
+
+	void advance()
+	{
+		for (auto& cb : vsConstantBuffers)
+			cb.next();
+
+		for (auto& cb : psConstantBuffers)
+			cb.next();
 	}
 
 	void updateConstantBuffer(const std::string& cbName, std::string varName, void* data, enum ShaderType type) {
@@ -143,13 +150,80 @@ public:
 };
 
 
+
+class ShaderManager {
+public:
+	std::unordered_map<std::string, Shader*> shaders;
+
+	Shader* createShader(Core* core, std::string name, const std::string& vertexShaderFile, const std::string& pixelShaderFile)
+	{
+		if (shaders.find(name) != shaders.end())
+		{
+			return shaders[name];
+		}
+		Shader* shader = new Shader();
+		shader->init(vertexShaderFile, pixelShaderFile);
+		shader->reflect(core);
+		shaders.insert({ name, shader });
+		return shader;
+	}
+
+	void applyShader(Core* core, std::string name) {
+		shaders[name]->apply(core);
+	}
+
+	void updateConstantBuffers(std::string shaderName, const std::string& cbName, void* data) {
+		Shader* shader = shaders[shaderName];
+		// Update VS constant buffers
+		for (auto& cb : shader->vsConstantBuffers) {
+			if (cb.name == cbName) {
+				cb.update(cbName, data);
+			}
+		}
+		// Update PS constant buffers
+		for (auto& cb : shader->psConstantBuffers) {
+			if (cb.name == cbName) {
+				cb.update(cbName, data);
+				return;
+			}
+		}
+	}
+
+	void updateConstantBuffer(const std::string& shaderName, const std::string& cbName, std::string varName, void* data, enum ShaderType type) {
+		Shader* shader = shaders[shaderName];
+		shader->updateConstantBuffer(cbName, varName, data, type);
+	}
+
+	void updateAllConstantBuffers(const std::string& shaderName) {
+		Shader* shader = shaders[shaderName];
+		shader->updateAllConstantBuffers();
+	}
+
+	void updateAllConstantBuffers() {
+		for (auto& sd : shaders) {
+			sd.second->updateAllConstantBuffers();
+		}
+	}
+
+	void setConstantBufferValuePointer(const std::string& shaderName, const std::string& cbName, std::string varName, void* pointer, enum ShaderType type) {
+		Shader* shader = shaders[shaderName];
+		shader->setConstantBufferValuePointer(cbName, varName, pointer, type);
+	}
+};
+
+
+
+
 // Pipeline State Object Manager
 class PSOManager {
 public:
 	std::unordered_map<std::string, ID3D12PipelineState*> psos;
 	std::unordered_map<std::string, ID3D12RootSignature*> rootSignatures;
 
-	std::unordered_map<std::string, Shader*> shaders;
+	std::unordered_map<std::string, std::string> shaderNames;
+	ShaderManager* shaderManager;
+
+	PSOManager(ShaderManager* _shaderManager) : shaderManager(_shaderManager) {}
 
 private:
 	void createPSO(Core* core, std::string name, ID3DBlob* vs, ID3DBlob* ps, D3D12_INPUT_LAYOUT_DESC layout)
@@ -225,9 +299,10 @@ private:
 	}
 
 public:
-	void createPSO(Core* core, std::string name, Shader* shader, D3D12_INPUT_LAYOUT_DESC layout) {
-		shaders.insert({ name, shader });
-		createPSO(core, name, shader->vertexShader, shader->pixelShader, layout);
+	void createPSO(Core* core, std::string name, std::string _shaderName, D3D12_INPUT_LAYOUT_DESC layout) {
+		shaderNames.insert({ name, _shaderName });
+		createPSO(core, name, shaderManager->shaders[_shaderName]->vertexShader,
+			shaderManager->shaders[_shaderName]->pixelShader, layout);
 	}
 
 	void bind(Core* core, std::string name) {
@@ -240,7 +315,11 @@ public:
 		// Bind PSO and root signature
 		bind(core, name);
 		// Apply shader constant buffers
-		shaders[name]->apply(core);
+		shaderManager->applyShader(core, shaderNames[name]);
+	}
+
+	void advance(std::string name) {
+		shaderManager->shaders[shaderNames[name]]->advance();
 	}
 
 	ID3D12RootSignature* createRootSignature(Core* core, int registerSlot) {
@@ -316,65 +395,9 @@ public:
 		
 		return rootSig;
 	}
-};
 
-
-class ShaderManager {
-public:
-	std::unordered_map<std::string, Shader*> shaders;
-
-	Shader* createShader(Core* core, std::string name, const std::string& vertexShaderFile, const std::string& pixelShaderFile)
-	{
-		if (shaders.find(name) != shaders.end())
-		{
-			return shaders[name];
-		}
-		Shader* shader = new Shader();
-		shader->init(vertexShaderFile, pixelShaderFile);
-		shader->reflect(core);
-		shaders.insert({ name, shader });
-		return shader;
-	}
-
-	void applyShader(Core* core, std::string name) {
-		shaders[name]->apply(core);
-	}
-
-	void updateConstantBuffers(std::string shaderName, const std::string& cbName, void* data) {
-		Shader* shader = shaders[shaderName];
-		// Update VS constant buffers
-		for (auto& cb : shader->vsConstantBuffers) {
-			if (cb.name == cbName) {
-				cb.update(cbName, data);
-			}
-		}
-		// Update PS constant buffers
-		for (auto& cb : shader->psConstantBuffers) {
-			if (cb.name == cbName) {
-				cb.update(cbName, data);
-				return;
-			}
-		}
-	}
-
-	void updateConstantBuffer(const std::string& shaderName, const std::string& cbName, std::string varName, void* data, enum ShaderType type) {
-		Shader* shader = shaders[shaderName];
-		shader->updateConstantBuffer(cbName, varName, data, type);
-	}
-
-	void updateAllConstantBuffers(const std::string& shaderName) {
-		Shader* shader = shaders[shaderName];
-		shader->updateAllConstantBuffers();
-	}
-
-	void updateAllConstantBuffers() {
-		for (auto& sd : shaders) {
-			sd.second->updateAllConstantBuffers();
-		}
-	}
-
-	void setConstantBufferValuePointer(const std::string& shaderName, const std::string& cbName, std::string varName, void* pointer, enum ShaderType type) {
-		Shader* shader = shaders[shaderName];
-		shader->setConstantBufferValuePointer(cbName, varName, pointer, type);
+	Shader* getShader(std::string psoName) {
+		std::string shaderName = shaderNames[psoName];
+		return shaderManager->shaders[shaderName];
 	}
 };

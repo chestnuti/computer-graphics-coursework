@@ -610,8 +610,10 @@ public:
 
 	void draw(Core* core) {
 		for (int i = 0; i < meshes.size(); i++) {
+			psoManager->getShader(meshes[i]->psoNames)->updateAllConstantBuffers();
 			psoManager->set(core, meshes[i]->psoNames);
-			meshes[i]->draw(core, psoManager->shaders[meshes[i]->psoNames]);
+			meshes[i]->draw(core, psoManager->getShader(meshes[i]->psoNames));
+			psoManager->advance(meshes[i]->psoNames);
 		}
 	}
 
@@ -773,9 +775,10 @@ public:
 
 	void drawInstanced(Core* core) {
 		for (int i = 0; i < instancedMeshes.size(); i++) {
+			psoManager->getShader(instancedMeshes[i]->mesh->psoNames)->updateAllConstantBuffers();
 			psoManager->set(core, instancedMeshes[i]->mesh->psoNames);
-			instancedMeshes[i]->drawInstanced(core, psoManager->shaders[instancedMeshes[i]->mesh->psoNames]);
-			Shader* shader = psoManager->shaders[instancedMeshes[i]->mesh->psoNames];
+			instancedMeshes[i]->drawInstanced(core, psoManager->getShader(instancedMeshes[i]->mesh->psoNames));
+			Shader* shader = psoManager->getShader(instancedMeshes[i]->mesh->psoNames);
 		}
 	}
 };

@@ -78,6 +78,8 @@ public:
 
 	virtual void draw(Core* core) {
 		if (object != nullptr) {
+			object->psoManager->getShader("animatedPSO")->updateConstantBuffer("animatedMeshBuffer", "bones", getBoneMatrices(), VERTEX_SHADER);
+			object->psoManager->getShader("animatedPSO")->updateConstantBuffer("animatedMeshBuffer", "W", getWorldMatrix(), VERTEX_SHADER);
 			object->draw(core);
 		}
 	}
@@ -106,6 +108,8 @@ public:
 	}
 
 	void update(float dt) override {
+		// control player movement
+		position += forward * dt * speed;
 		// update camera
 		camera->control(win, dt);
 		camera->bindTragetAt(position + Vec3(0.0f, 4.0f, 0.0f));
@@ -135,8 +139,7 @@ public:
 			speed -= 50.0f * dt;
 			if (speed < 0.0f) speed = 0.0f;
 		}
-		// control player movement
-		position += forward * dt * speed;
+		
 
 		// change state based on speed
 		if (speed > 5.0f) {
@@ -153,5 +156,17 @@ public:
 		stateMachine->update(dt);
 
 		updateWorldMatrix();
+	}
+};
+
+
+
+class Hen : public Actor {
+public:
+
+	void init(Object* obj) override {
+		Actor::init(obj);
+		//set initial state
+		stateMachine->setCurrentState("idle");
 	}
 };

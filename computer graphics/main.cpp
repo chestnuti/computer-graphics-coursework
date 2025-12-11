@@ -36,11 +36,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	shaderManager.createShader(&core, "instancedShader", "./hlsl/InstancedVS.hlsl", "./hlsl/BasicPS.hlsl");
 	
 	// Create PSO manager
-	PSOManager psos;
-	psos.createPSO(&core, "animatedPSO", shaderManager.shaders["animatedShader"], LayoutCache::getAnimatedLayout());
-	psos.createPSO(&core, "basicPSO", shaderManager.shaders["basicShader"], LayoutCache::getStaticLayout());
-	psos.createPSO(&core, "skyboxPSO", shaderManager.shaders["skyboxShader"], LayoutCache::getStaticLayout());
-	psos.createPSO(&core, "instancedPSO", shaderManager.shaders["instancedShader"], LayoutCache::getInstancedLayout());
+	PSOManager psos(&shaderManager);
+	psos.createPSO(&core, "animatedPSO", "animatedShader", LayoutCache::getAnimatedLayout());
+	psos.createPSO(&core, "basicPSO", "basicShader", LayoutCache::getStaticLayout());
+	psos.createPSO(&core, "skyboxPSO", "skyboxShader", LayoutCache::getStaticLayout());
+	psos.createPSO(&core, "instancedPSO", "instancedShader", LayoutCache::getInstancedLayout());
 
 	// Load images
 	ImageLoader imageLoader(&core);
@@ -90,16 +90,17 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	hen_brown.loadGEM(&core, "Models/AnimatedLowPolyAnimals/Hen-brown.gem", "animatedPSO");
 	hen_brown.setDiffuseTexture(imageLoader.getImage("AnimalsColorMap"));
 	hen_brown.setNormalTexture(imageLoader.getImage("AnimalsNormalMap"));
-	hen_brown.scale = Vec3(0.02f, 0.02f, 0.02f);
-	Actor henActor;
+	hen_brown.scale = Vec3(0.05f, 0.05f, 0.05f);
+	Hen henActor;
 	henActor.init(&hen_brown);
 	henActor.position = Vec3(5.0f, 0.0f, 5.0f);
 
 	// Create hitbox
 	HitboxManager hitboxManager(&eventBus);
-	hitboxManager.addHitbox(&playerActor, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.5f, 1.0f, 0.5f));
-	hitboxManager.addHitbox(&henActor, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.5f, 1.0f, 0.5f));
+	hitboxManager.addHitbox(&playerActor, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.7f, 1.0f, 0.7f));
+	hitboxManager.addHitbox(&henActor, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.7f, 1.0f, 0.7f));
 	playerActor.subscribeCollisionEvent(&eventBus);
+	henActor.subscribeCollisionEvent(&eventBus);
 
 	std::vector<InstanceData> instanceDatas;
 	for (int i = 0; i < 3000; i++) {
@@ -126,8 +127,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Vec4 lightDirection = Vec4(-1.0f, -1.0f, 0.0f, 0.0f).normalize();
 
 	// set constant buffer pointers
-	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "bones", playerActor.getBoneMatrices(), VERTEX_SHADER);
-	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "W", playerActor.getWorldMatrix(), VERTEX_SHADER);
+	//shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "bones", playerActor.getBoneMatrices(), VERTEX_SHADER);
+	//shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "W", playerActor.getWorldMatrix(), VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "VP", &VP, VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
@@ -152,6 +153,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 		// update parameters
 		playerActor.update(dt);
+		henActor.update(dt);
 		VP = camera.getViewProjectionMatrix();
 		skyboxBuffer_W = Mat4().Translate(camera.position.v[0], camera.position.v[1], camera.position.v[2]) * Mat4().Scale(camera.clipFar - 1, camera.clipFar - 1, camera.clipFar - 1);
 
@@ -161,10 +163,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		// dispatch events
 		eventBus.dispatch();
 
+
 		core.beginRenderPass();
 
-		// update shader constant buffers
-		shaderManager.updateAllConstantBuffers();
 
 		// update instance buffer
 		instancedObject.updateInstances(instanceDatas);
@@ -172,11 +173,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		// set samplers
 		imageLoader.applySampler();
 
-		// draw models
-		playerActor.draw(&core);
-
 		// draw NPCs
 		henActor.draw(&core);
+
+		// draw player
+		playerActor.draw(&core);
 
 		// draw instances
 		instancedObject.drawInstanced(&core);
