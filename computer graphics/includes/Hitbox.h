@@ -1,12 +1,8 @@
 #pragma once
 #include "Vector.h"
 #include "Actor.h"
-
-
-struct HitboxCollisionInfo {
-	Hitbox* hitboxA;
-	Hitbox* hitboxB;
-};
+#include "EventBus.h"
+#include "Operators.h"
 
 
 class Hitbox {
@@ -18,26 +14,37 @@ public:
 	Vec3 position;
 	Vec3 size;
 
-	Hitbox() : position(0.0f, 0.0f, 0.0f), size(1.0f, 1.0f, 1.0f) {}
+	Hitbox(Actor* pParent, const Vec3& pLocalPosition, const Vec3& pSize)
+		: parent(pParent), local_position(pLocalPosition), size(pSize) {
+		update();
+	}
 
-	HitboxCollisionInfo checkCollision(const Hitbox& other) {
-		HitboxCollisionInfo info;
-		info.hitboxA = nullptr;
-		info.hitboxB = nullptr;
-		if (position.v[0] + size.v[0] < other.position.v[0] ||
-			position.v[0] > other.position.v[0] + other.size.v[0]) {
+	HitboxCollisionEvent checkCollision(const Hitbox& other) {
+		HitboxCollisionEvent info;
+		info.collided = false;
+		info.contactPoint = Vec3(0.0f, 0.0f, 0.0f);
+		info.actorA = nullptr;
+		info.actorB = nullptr;
+		if (position.v[0] + size.v[0] < other.position.v[0] - other.size.v[0] ||
+			position.v[0] - size.v[0] > other.position.v[0] + other.size.v[0]) {
 			return info;
 		}
-		if (position.v[1] + size.v[1] < other.position.v[1] ||
-			position.v[1] > other.position.v[1] + other.size.v[1]) {
+		if (position.v[1] + size.v[1] < other.position.v[1] - other.size.v[1] ||
+			position.v[1] - size.v[1] > other.position.v[1] + other.size.v[1]) {
 			return info;
 		}
-		if (position.v[2] + size.v[2] < other.position.v[2] ||
-			position.v[2] > other.position.v[2] + other.size.v[2]) {
+		if (position.v[2] + size.v[2] < other.position.v[2] - other.size.v[2] ||
+			position.v[2] - size.v[2] > other.position.v[2] + other.size.v[2]) {
 			return info;
 		}
-		info.hitboxA = this;
-		info.hitboxB = (Hitbox*)&other;
+		info.collided = true;
+		info.contactPoint = Vec3(
+			(position.v[0] + other.position.v[0]) * (size.v[0] / (size.v[0] + other.size.v[0])),
+			(position.v[1] + other.position.v[1]) * (size.v[1] / (size.v[1] + other.size.v[1])),
+			(position.v[2] + other.position.v[2]) * (size.v[2] / (size.v[2] + other.size.v[2]))
+		);
+		info.actorA = parent;
+		info.actorB = other.parent;
 		return info;
 	}
 
@@ -49,6 +56,12 @@ public:
 			position = local_position;
 		}
 	}
+
+	void registeEvent(EventBus* eventBus, HitboxCollisionEvent info) {
+		if (eventBus != nullptr) {
+			eventBus->queue<HitboxCollisionEvent>(info);
+		}
+	}
 };
 
 
@@ -57,7 +70,12 @@ class HitboxManager {
 public:
 	std::vector<Hitbox*> hitboxes;
 
-	void addHitbox(Hitbox* hitbox) {
+	EventBus* eventBus;
+
+	HitboxManager(EventBus* pEventBus) : eventBus(pEventBus) {}
+
+	void addHitbox(Actor* pParent, const Vec3& pLocalPosition, const Vec3& pSize) {
+		Hitbox* hitbox = new Hitbox(pParent, pLocalPosition, pSize);
 		hitboxes.push_back(hitbox);
 	}
 
@@ -65,16 +83,15 @@ public:
 		for (auto& hitbox : hitboxes) {
 			hitbox->update();
 		}
-		
-	}
-};
-
-
-
-class CollisionEvent {
-public:
-
-	void onCollision(HitboxCollisionInfo info) {
-		// Handle collision event
+		// Check for collisions
+		for (size_t i = 0; i < hitboxes.size(); i++) {
+			for (size_t j = i + 1; j < hitboxes.size(); j++) {
+				HitboxCollisionEvent info = hitboxes[i]->checkCollision(*hitboxes[j]);
+				if (info.collided) {
+					hitboxes[i]->registeEvent(eventBus, info);
+					hitboxes[j]->registeEvent(eventBus, info);
+				}
+			}
+		}
 	}
 };

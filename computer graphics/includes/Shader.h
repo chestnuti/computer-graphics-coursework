@@ -129,6 +129,7 @@ public:
 		}
 	}
 
+	// set pointer for constant buffer variable, to be used in updateAll
 	void setConstantBufferValuePointer(const std::string& cbName, std::string varName, void* pointer, enum ShaderType type) {
 		std::vector<ConstantBuffer>& buffers = (type == VERTEX_SHADER) ? vsConstantBuffers : psConstantBuffers;
 		for (auto& cb : buffers) {

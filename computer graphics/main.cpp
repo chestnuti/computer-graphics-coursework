@@ -7,6 +7,8 @@
 #include "./includes/Camera.h"
 #include "./includes/Image.h"
 #include "./includes/Actor.h"
+#include "./includes/EventBus.h"
+#include "./includes/Hitbox.h"
 #include "./includes/GamesEngineeringBase.h"
 #include "./includes/GEMLoader.h"
 
@@ -20,6 +22,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Core core;
 	core.init(win.hwnd, win.width, win.height);
 	GamesEngineeringBase::Timer timer;
+
+	// Create event bus
+	EventBus eventBus;
 
 	// Create camera
 	Camera camera;
@@ -41,8 +46,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	ImageLoader imageLoader(&core);
 	imageLoader.loadImage("Blank", "Models/Textures/Textures1_NH.png");
 	imageLoader.loadImage("Sky", "Models/Textures/sky.png");
-	imageLoader.loadImage("Ground", "Models/Textures/aerial_rocks_04_diff_4k.png");
-	imageLoader.loadImage("Ground_Normal", "Models/Textures/aerial_rocks_04_nor_dx_4k.png");
+	imageLoader.loadImage("Ground", "Models/Textures/moss_groud_01_Base_Color_4k.png");
+	imageLoader.loadImage("Ground_Normal", "Models/Textures/moss_groud_01_Normal_dx_4k.png");
 	imageLoader.loadImage("ColorMap", "Models/LowPolyMilitary/Textures/Textures1_ALB.png");
 	imageLoader.loadImage("AnimalsColorMap", "Models/AnimatedLowPolyAnimals/Textures/T_Animalstextures_alb.png");
 	imageLoader.loadImage("AnimalsNormalMap", "Models/AnimatedLowPolyAnimals/Textures/T_Animalstextures_nh.png");
@@ -51,7 +56,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Object player(&psos);
 	player.loadGEM(&core, "Models/AnimatedLowPolyAnimals/Farmer-male.gem", "animatedPSO");
 	player.setDiffuseTexture(imageLoader.getImage("AnimalsColorMap"));
-	//player.setNormalTexture(imageLoader.getImage("AnimalsNormalMap"));
+	player.setNormalTexture(imageLoader.getImage("AnimalsNormalMap"));
 	player.rotateBy(90.0f, X_AXIS);
 	player.rotateBy(180.0f, Z_AXIS);
 	player.scale = Vec3(0.05f, 0.05f, 0.05f);
@@ -71,7 +76,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	sphere.setDiffuseTexture(imageLoader.getImage("Sky"));
 
 	Plane plane;
-	plane.init(&core, 30.0f);
+	plane.init(&core, 15.0f);
 	plane.psoNames = "basicPSO";
 	plane.setDiffuseTexture(imageLoader.getImage("Ground"));
 	plane.setNormalTexture(imageLoader.getImage("Ground_Normal"));
@@ -80,16 +85,27 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	otherObjects.meshes.push_back(&plane);
 	otherObjects.meshes.push_back(&sphere);
 
+	// NPCs
+	Object hen_brown(&psos);
+	hen_brown.loadGEM(&core, "Models/AnimatedLowPolyAnimals/Hen-brown.gem", "animatedPSO");
+	hen_brown.setDiffuseTexture(imageLoader.getImage("AnimalsColorMap"));
+	hen_brown.setNormalTexture(imageLoader.getImage("AnimalsNormalMap"));
+	hen_brown.scale = Vec3(0.02f, 0.02f, 0.02f);
+	Actor henActor;
+	henActor.init(&hen_brown);
+	henActor.position = Vec3(5.0f, 0.0f, 5.0f);
 
-	// Create cube instances
-	Cube cube;
-	cube.init(&core, 1.0f);
+	// Create hitbox
+	HitboxManager hitboxManager(&eventBus);
+	hitboxManager.addHitbox(&playerActor, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.5f, 1.0f, 0.5f));
+	hitboxManager.addHitbox(&henActor, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.5f, 1.0f, 0.5f));
+	playerActor.subscribeCollisionEvent(&eventBus);
 
 	std::vector<InstanceData> instanceDatas;
 	for (int i = 0; i < 3000; i++) {
 		InstanceData inst;
-		float randX = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 60.0f;
-		float randZ = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 60.0f;
+		float randX = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 30.0f;
+		float randZ = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 30.0f;
 		float randRotation = ((float)(rand() % 1000) / 1000.0f) * 360.0f;
 		float randScale = ((float)(rand() % 1000) / 1000.0f) * 0.01f + 0.005f;
 		inst.World = Mat4().Translate(randX, 0, randZ) * Mat4().RotateY(randRotation) * Mat4().Scale(randScale, randScale, randScale);
@@ -107,7 +123,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Mat4 W2 = Mat4()._Identity();
 	Mat4 skyboxBuffer_W;
 	float animationTransition = 0.0f;
-	Vec4 lightDirection = Vec4(0.0f, -1.0f, -1.0f, 0.0f).normalize();
+	Vec4 lightDirection = Vec4(-1.0f, -1.0f, 0.0f, 0.0f).normalize();
 
 	// set constant buffer pointers
 	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "bones", playerActor.getBoneMatrices(), VERTEX_SHADER);
@@ -139,20 +155,28 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		VP = camera.getViewProjectionMatrix();
 		skyboxBuffer_W = Mat4().Translate(camera.position.v[0], camera.position.v[1], camera.position.v[2]) * Mat4().Scale(camera.clipFar - 1, camera.clipFar - 1, camera.clipFar - 1);
 
+		// update hitboxes
+		hitboxManager.update();
+
+		// dispatch events
+		eventBus.dispatch();
+
+		core.beginRenderPass();
+
 		// update shader constant buffers
 		shaderManager.updateAllConstantBuffers();
 
 		// update instance buffer
 		instancedObject.updateInstances(instanceDatas);
 
-		core.beginRenderPass();
-
-
 		// set samplers
 		imageLoader.applySampler();
 
 		// draw models
-		player.draw(&core);
+		playerActor.draw(&core);
+
+		// draw NPCs
+		henActor.draw(&core);
 
 		// draw instances
 		instancedObject.drawInstanced(&core);
@@ -161,6 +185,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		otherObjects.draw(&core);
 		
 		core.finishFrame();
+
+
 	}
 	core.flushGraphicsQueue();
 	return 0;

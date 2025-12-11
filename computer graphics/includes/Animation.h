@@ -196,6 +196,12 @@ public:
 		totalWeight += weight;
 	}
 
+	void addAllAnimations(Animation* animation, float weight, float startTime, float speed) {
+		for (const auto& pair : animation->animations) {
+			addItem(animation, pair.first, weight, startTime, speed);
+		}
+	}
+
 	void update(float dt) {
 		globalTime += dt;
 		for (int i = 0; i < items.size(); i++) {
@@ -349,6 +355,6 @@ public:
 		}
 
 		// Debug output
-		DebugPrint("Current State: " + currentState + ", Next States: " + std::to_string(stateList.size()) + ", Transition Time: " + std::to_string(transTime));
+		//DebugPrint("Current State: " + currentState + ", Next States: " + std::to_string(stateList.size()) + ", Transition Time: " + std::to_string(transTime));
 	}
 };

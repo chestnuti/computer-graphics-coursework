@@ -6,6 +6,9 @@
 #include <typeindex>
 #include <memory>
 
+class Actor;
+class Hitbox;
+
 
 struct Event {
     virtual ~Event() = default;
@@ -15,19 +18,22 @@ struct Event {
 class EventBus {
 private:
     struct EventWrapper {
-        virtual ~EventWrapper() = default;
         const Event* event;
         std::type_index type;
+
+        EventWrapper(const Event* e, std::type_index t)
+            : event(e), type(t) {
+        }
+
+        virtual ~EventWrapper() {
+            delete event;
+        }
     };
 
     template<typename T>
     struct Wrapper : EventWrapper {
-        Wrapper(const T& evt) {
-            event = new T(evt);
-            type = typeid(T);
-        }
-        ~Wrapper() {
-            delete event;
+        Wrapper(const T& evt)
+            : EventWrapper(new T(evt), typeid(T)) {
         }
     };
 
@@ -35,12 +41,13 @@ private:
     std::unordered_map<std::type_index, std::vector<std::function<void(const Event&)>>> subscribers;
 
 public:
+	// Queue an event for later dispatch
     template<typename EventType>
     void queue(const EventType& event) {
-		// Store event in the queue buffer
         queueBuffer.emplace_back(std::make_unique<Wrapper<EventType>>(event));
     }
 
+	// Dispatch all queued events to their subscribers
     void dispatch() {
         for (auto& e : queueBuffer) {
             auto it = subscribers.find(e->type);
@@ -52,6 +59,7 @@ public:
         queueBuffer.clear();
     }
 
+	// Subscribe to an event type
     template<typename EventType>
     void subscribe(std::function<void(const EventType&)> handler) {
         subscribers[typeid(EventType)].push_back(
@@ -62,3 +70,13 @@ public:
     }
 };
 
+
+
+
+// Hitbox Collision Event
+struct HitboxCollisionEvent : public Event {
+    bool collided;
+    Vec3 contactPoint;
+    Actor* actorA;
+    Actor* actorB;
+};

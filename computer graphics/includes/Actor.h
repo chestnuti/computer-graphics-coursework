@@ -4,9 +4,13 @@
 #include "Mesh.h"
 #include "Window.h"
 #include "Animation.h"
+#include "EventBus.h"
 
 
 class Actor {
+protected:
+	Sequencer sequencer;
+	StateMachine* stateMachine;
 public:
 	Object* object;
 
@@ -15,7 +19,7 @@ public:
 	Vec3 scale;
 	Mat4 worldMatrix;
 
-	float speed = 10.0f;
+	float speed = 0.0f;
 	Vec3 forward = Vec3(0.0f, 0.0f, 1.0f);
 	Vec3 right = Vec3(1.0f, 0.0f, 0.0f);
 	Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
@@ -25,6 +29,9 @@ public:
 		position = Vec3(0.0f, 0.0f, 0.0f);
 		rotation = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		scale = Vec3(1.0f, 1.0f, 1.0f);
+		sequencer = Sequencer();
+		sequencer.addAllAnimations(&object->animation, 0.0f, 0.0f, 1.0f);
+		stateMachine = new StateMachine(&sequencer);
 	}
 
 	void updateWorldMatrix() {
@@ -46,6 +53,33 @@ public:
 			// update object's transform from actor's transform
 			updateWorldMatrix();
 		}
+		sequencer.update(dt);
+	}
+
+	void subscribeCollisionEvent(EventBus* eventBus) {
+		eventBus->subscribe<HitboxCollisionEvent>(
+			[this](const HitboxCollisionEvent& event) {
+				// Check if this actor's object is involved in the collision
+				if (event.actorA == this || event.actorB == this) {
+					// push back the actor slightly along the collision normal
+					Vec3 pushDir = event.contactPoint - this->position;
+					pushDir.v[1] = 0.0f; // keep on ground
+					pushDir = pushDir.normalize();
+					if (pushDir.Dot(forward) > 0.5f)
+						speed = 0.0f;
+				}
+			}
+		);
+	}
+
+	Mat4* getBoneMatrices() {
+		return sequencer.getBoneMatrices();
+	}
+
+	virtual void draw(Core* core) {
+		if (object != nullptr) {
+			object->draw(core);
+		}
 	}
 };
 
@@ -53,12 +87,9 @@ public:
 
 
 class Player : public Actor {
-private:
-	Sequencer sequencer;
 public:
 	Window* win;
 	Camera* camera;
-	StateMachine* stateMachine;
 
 	Player(Window* window) : win(window) {
 		Sequencer sequencer;
@@ -66,16 +97,7 @@ public:
 
 	void init(Object* obj) override {
 		Actor::init(obj);
-		sequencer = Sequencer();
-		sequencer.addItem(&obj->animation, "idle basic 01", 0.0f, 0.0f, 1.0f);
-		sequencer.addItem(&obj->animation, "idle basic 02", 0.0f, 0.0f, 1.0f);
-		sequencer.addItem(&obj->animation, "walk", 0.0f, 0.0f, 1.0f);
-		sequencer.addItem(&obj->animation, "run", 0.0f, 0.0f, 1.0f);
-		sequencer.addItem(&obj->animation, "jump", 0.0f, 0.0f, 1.0f);
-		sequencer.addItem(&obj->animation, "land", 0.0f, 0.0f, 1.0f);
-		sequencer.addItem(&obj->animation, "fall loop", 0.0f, 0.0f, 1.0f);
-		//Create State Machine
-		stateMachine = new StateMachine(&sequencer);
+		//set initial state
 		stateMachine->setCurrentState("idle basic 01");
 	}
 
@@ -130,11 +152,6 @@ public:
 		//update animation
 		stateMachine->update(dt);
 
-		// Call base class update to update the object
-		Actor::update(dt);
-	}
-
-	Mat4* getBoneMatrices() {
-		return sequencer.getBoneMatrices();
+		updateWorldMatrix();
 	}
 };
