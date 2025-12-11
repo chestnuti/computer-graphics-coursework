@@ -80,3 +80,24 @@ struct HitboxCollisionEvent : public Event {
     Actor* actorA;
     Actor* actorB;
 };
+
+
+// Player Catch Event
+struct PlayerCatchEvent : public Event {
+    Actor* player;
+	Vec3 catchPosition;
+	Vec3 playerForward;
+};
+
+// Player Release Event
+struct PlayerReleaseEvent : public Event {
+    Actor* player;
+    Vec3 releasePosition;
+    Vec3 playerForward;
+};
+
+// Hen Catched Event
+struct HenCatchedEvent : public Event {
+    Actor* hen;
+    Actor* player;
+};

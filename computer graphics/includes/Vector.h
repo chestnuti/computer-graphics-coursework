@@ -61,6 +61,10 @@ public:
 		v[0] *= len; v[1] *= len; v[2] *= len;
 		return length;
 	}
+	float getLength() const
+	{
+		return sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+	}
 
 	float Dot(const Vec3& pVec) const
 	{

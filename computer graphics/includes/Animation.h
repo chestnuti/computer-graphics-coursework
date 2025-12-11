@@ -251,6 +251,10 @@ public:
 		totalWeight = 0.0f;
 	}
 
+	void resetTime() {
+		globalTime = 0.0f;
+	}
+
 	~Sequencer() {
 		items.clear();
 	}
@@ -265,6 +269,8 @@ public:
 	std::vector<std::string> stateList;
 	std::vector<float> transitionTimes;
 	float transTime;	// remaining time for current transition
+
+	StateMachine() : sequencer(nullptr) {}
 
 	StateMachine(Sequencer* seq) : sequencer(seq), currentState(""), transTime(0.0f) {}
 

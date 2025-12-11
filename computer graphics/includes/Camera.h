@@ -111,7 +111,7 @@ public:
 			pitch = 89.0f;
 		if (pitch < -89.0f)
 			pitch = -89.0f;
-		float radius = 5.0f;
+		float radius = 4.0f;
 		position.v[0] = target.v[0] + radius * cosf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
 		position.v[1] = target.v[1] + radius * sinf(pitch * (float)M_PI / 180.0f);
 		position.v[2] = target.v[2] + radius * sinf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
