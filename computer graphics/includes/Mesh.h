@@ -703,7 +703,7 @@ public:
 			psoManager->getShader(instancedMeshes[i]->mesh->psoNames)->updateAllConstantBuffers();
 			psoManager->set(core, instancedMeshes[i]->mesh->psoNames);
 			instancedMeshes[i]->drawInstanced(core, psoManager->getShader(instancedMeshes[i]->mesh->psoNames));
-			Shader* shader = psoManager->getShader(instancedMeshes[i]->mesh->psoNames);
+			psoManager->advance(instancedMeshes[i]->mesh->psoNames);
 		}
 	}
 };

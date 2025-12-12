@@ -9,12 +9,13 @@
 #include "./includes/Actor.h"
 #include "./includes/EventBus.h"
 #include "./includes/Hitbox.h"
+#include "./includes/Levels.h"
 #include "./includes/GamesEngineeringBase.h"
 #include "./includes/GEMLoader.h"
 
 
 
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+/*int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	// Create window and initialize core
 	Window win;
 	win.create(ScreenWidth, ScreenHeight, "My Window");
@@ -54,6 +55,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	// Create hitbox
 	HitboxManager hitboxManager(&eventBus);
+	// add boundary
+	hitboxManager.addHitbox(nullptr, Vec3(60.0f, 0.0f, 0.0f), Vec3(1.0f, 1.0f, 60.0f));
+	hitboxManager.addHitbox(nullptr, Vec3(-60.0f, 0.0f, 0.0f), Vec3(1.0f, 1.0f, 60.0f));
+	hitboxManager.addHitbox(nullptr, Vec3(0.0f, 0.0f, 60.0f), Vec3(60.0f, 1.0f, 1.0f));
+	hitboxManager.addHitbox(nullptr, Vec3(0.0f, 0.0f, -60.0f), Vec3(60.0f, 1.0f, 1.0f));
 
 	// Load mesh
 	Object player(&psos);
@@ -70,9 +76,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	playerActor.subscribeEvent(&eventBus);
 
 	// Load grass
-	Object grass(&psos);
-	grass.loadGEM(&core, "Models/LowPolyMilitary/grass_003.gem", "instancedPSO");
-	grass.setDiffuseTexture(imageLoader.getImage("ColorMap"));
+	Object grass003(&psos);
+	grass003.loadGEM(&core, "Models/LowPolyMilitary/grass_003.gem", "instancedPSO");
+	grass003.setDiffuseTexture(imageLoader.getImage("ColorMap"));
 
 	// skybox and ground
 	Sphere sphere;
@@ -81,7 +87,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	sphere.setDiffuseTexture(imageLoader.getImage("Sky"));
 
 	Plane plane;
-	plane.init(&core, 15.0f);
+	plane.init(&core, 60.0f);
 	plane.psoNames = "basicPSO";
 	plane.setDiffuseTexture(imageLoader.getImage("Ground"));
 	plane.setNormalTexture(imageLoader.getImage("Ground_Normal"));
@@ -102,7 +108,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		Hen* henActor = new Hen();
 		henActor->init(hen_brown);
 		henActor->setPlayer(&playerActor);
-		henActor->position = Vec3((float)(rand() % 1000) / 1000.0f * 10.0f, 0.0f, (float)(rand() % 1000) / 1000.0f * 10.0f);
+		henActor->position = Vec3((float)(rand() % 1000) / 1000.0f * 30.0f, 0.0f, (float)(rand() % 1000) / 1000.0f * 10.0f);
 		// subscribe to events
 		henActor->subscribeEvent(&eventBus);
 		// add hitbox
@@ -114,23 +120,22 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	std::vector<InstanceData> instanceDatas;
 	for (int i = 0; i < 3000; i++) {
 		InstanceData inst;
-		float randX = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 30.0f;
-		float randZ = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 30.0f;
+		float randX = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 120.0f;
+		float randZ = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 120.0f;
 		float randRotation = ((float)(rand() % 1000) / 1000.0f) * 360.0f;
 		float randScale = ((float)(rand() % 1000) / 1000.0f) * 0.01f + 0.005f;
 		inst.World = Mat4().Translate(randX, 0, randZ) * Mat4().RotateY(randRotation) * Mat4().Scale(randScale, randScale, randScale);
 		inst.World = inst.World.Transpose();
-		inst.Color = Vec4(1, 1, 1, 1);
 		instanceDatas.push_back(inst);
 	}
 
-	InstancedObject instancedObject(&psos);
-	instancedObject.init(&core, &grass, instanceDatas);
+	InstancedObject instanced_grass003(&psos);
+	instanced_grass003.init(&core, &grass003, instanceDatas);
 	
 	// params
 	float time = 0.0f;
 	Mat4 VP = camera.getViewProjectionMatrix();
-	Mat4 W2 = Mat4()._Identity();
+	Mat4 W = Mat4()._Identity();
 	Mat4 skyboxBuffer_W;
 	float animationTransition = 0.0f;
 	Vec4 lightDirection = Vec4(-1.0f, -1.0f, 0.0f, 0.0f).normalize();
@@ -139,11 +144,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	//shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "bones", playerActor.getBoneMatrices(), VERTEX_SHADER);
 	//shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "W", playerActor.getWorldMatrix(), VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "VP", &VP, VERTEX_SHADER);
-	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "W", &W, VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("basicShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("skyboxShader", "skyboxBuffer", "W", &skyboxBuffer_W, VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("skyboxShader", "skyboxBuffer", "VP", &VP, VERTEX_SHADER);
-	shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "W", &W2, VERTEX_SHADER);
+	shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "W", &W, VERTEX_SHADER);
 	shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
 
 	shaderManager.setConstantBufferValuePointer("animatedShader", "basicPSBuffer", "lightDirection", &lightDirection, PIXEL_SHADER);
@@ -177,7 +182,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 
 		// update instance buffer
-		instancedObject.updateInstances(instanceDatas);
+		instanced_grass003.updateInstances(instanceDatas);
 
 		// set samplers
 		imageLoader.applySampler();
@@ -189,7 +194,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		playerActor.draw(&core);
 
 		// draw instances
-		instancedObject.drawInstanced(&core);
+		instanced_grass003.drawInstanced(&core);
 
 		// draw other objects
 		otherObjects.draw(&core);
@@ -199,5 +204,22 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	}
 	core.flushGraphicsQueue();
+	return 0;
+}*/
+
+
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+	// Create window and initialize core
+	Window win;
+	win.create(ScreenWidth, ScreenHeight, "My Window");
+	// Initialize core
+	Core core;
+	core.init(win.hwnd, win.width, win.height);
+
+	GameContext gameContext(&core, &win);
+	gameContext.init();
+
+	gameContext.update();
+
 	return 0;
 }

@@ -63,6 +63,9 @@
     <ClInclude Include="includes\EventBus.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="includes\Levels.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

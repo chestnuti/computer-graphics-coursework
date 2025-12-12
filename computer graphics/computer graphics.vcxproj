@@ -136,6 +136,7 @@
     <ClInclude Include="includes\GEMLoader.h" />
     <ClInclude Include="includes\Hitbox.h" />
     <ClInclude Include="includes\Image.h" />
+    <ClInclude Include="includes\Levels.h" />
     <ClInclude Include="includes\Matrix.h" />
     <ClInclude Include="includes\Mesh.h" />
     <ClInclude Include="includes\Shader.h" />

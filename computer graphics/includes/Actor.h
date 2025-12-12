@@ -65,8 +65,9 @@ public:
 					Vec3 pushDir = event.contactPoint - this->position;
 					pushDir.v[1] = 0.0f; // keep on ground
 					pushDir = pushDir.normalize();
-					if (pushDir.Dot(forward) > 0.5f)
+					if (pushDir.Dot(forward) > 0.0f) {
 						speed = 0.0f;
+					}
 				}
 			}
 		);
@@ -246,12 +247,10 @@ public:
 			// control player movement
 			position += forward * dt * speed;
 			if (dist < 10.0f && !isScared) {
-				isScared = true;
-				stateMachine.transitionTo("run forward", 0.1f);
+				isScared = true;	
 			}
 			else if (dist >= 20.0f && isScared) {
 				isScared = false;
-				stateMachine.transitionTo("idle", 1.0f);
 			}
 			// if scared, move away from player
 			if (isScared) {
@@ -260,13 +259,21 @@ public:
 				Vec3 dir = position - player->position;
 				dir.v[1] = 0.0f; // keep on ground
 				dir = dir.normalize();
-				forward = dir;
-				Vec4 rot = quatFromTo(Vec3(0.0f, 0.0f, 1.0f), dir);
+				if (dir.Dot(forward) < -0.5f)
+					forward = dir;
+				Vec4 rot = quatFromTo(Vec3(0.0f, 0.0f, 1.0f), forward);
 				rotation = slerp(rotation, rot, dt * 10.0f);
 			}
 			else{
 				speed -= 10.0f * dt;
 				if (speed < 0.0f) speed = 0.0f;
+			}
+			// change state based on speed
+			if (speed > 0.0f) {
+				stateMachine.transitionTo("run forward", 0.1f);
+			}
+			else {
+				stateMachine.transitionTo("idle", 1.0f);
 			}
 			catchEventSent = false;
 		}
@@ -284,6 +291,7 @@ public:
 				catchEventSent = true;
 			}
 		}
+		
 		//update animation
 		stateMachine.update(dt);
 		updateWorldMatrix();
@@ -291,6 +299,23 @@ public:
 
 	void subscribeEvent(EventBus* eventBus) override {
 		Actor::subscribeEvent(eventBus);
+
+		// Subscribe to hitbox collision events
+		eventBus->subscribe<HitboxCollisionEvent>(
+			[this](const HitboxCollisionEvent& event) {
+				// Check if this actor's object is involved in the collision
+				if (event.actorA == this || event.actorB == this) {
+					// push back the actor slightly along the collision normal
+					Vec3 pushDir = event.contactPoint - this->position;
+					pushDir.v[1] = 0.0f; // keep on ground
+					pushDir = pushDir.normalize();
+					if (pushDir.Dot(forward) > 0.0f) {
+						speed = 0.0f;
+						forward = Vec3(rand() % 100 - 50.0f, 0.0f, rand() % 100 - 50.0f).normalize();
+					}
+				}
+			}
+		);
 
 		// Subscribe to catch events
 		eventBus->subscribe<PlayerCatchEvent>(

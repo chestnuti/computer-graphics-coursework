@@ -18,8 +18,10 @@ struct PS_INPUT
 float4 PS(PS_INPUT input) : SV_Target0
 {
     float4 texColor = float4(1.0, 1.0, 1.0, 1.0);
+    float3 shadowColor = float3(0.1, 0.2, 0.3);
+    float3 lightColor = float3(1.0, 1.0, 0.5);
     if (useTexture)
-    {
+    {   
         texColor = diffuseTexture.Sample(samplerState, input.TexCoords);
     }
     if (useNormalMap)
@@ -31,13 +33,13 @@ float4 PS(PS_INPUT input) : SV_Target0
         float3x3 TBN = float3x3(T, B, N);
         float3 modifiedNormal = normalize(mul(normalMap, TBN));
         float lightIntensity = saturate(dot(modifiedNormal, -lightDirection.xyz));
-        texColor.rgb *= lightIntensity * 1.5 + 0.2;
+        texColor.rgb *= lightIntensity * 1.2 + lightColor * lightIntensity + shadowColor * (1.0 - lightIntensity);
     }
     else
     {
         float3 N = normalize(input.Normal);
         float lightIntensity = saturate(dot(N, -lightDirection.xyz));
-        texColor.rgb *= lightIntensity * 1.5 + 0.2;
+        texColor.rgb *= lightIntensity * 1.2 + lightColor * lightIntensity + shadowColor * (1.0 - lightIntensity);
     }
     if (texColor.a < 0.5)
     {
