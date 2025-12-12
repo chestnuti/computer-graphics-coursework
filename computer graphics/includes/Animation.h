@@ -289,7 +289,7 @@ public:
 		int index = getStateIndex(state);
 		if (index == -1) return;
 		// if last state is same as new state, ignore
-		if (stateList.size() > 0 && stateList.back() == state) return;
+		if (stateList.size() > 0 && stateList.back() == state || stateList.size() > 3) return;
 		if (currentState == state) return;
 		stateList.push_back(state);
 		transitionTimes.push_back(time);

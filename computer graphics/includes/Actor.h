@@ -51,7 +51,10 @@ public:
 	virtual void update(float dt) {
 		// Update object
 		updateWorldMatrix();
-		sequencer.update(dt);
+		// check forward vector length
+		if (forward.getLength() == 0.0f) {
+			forward = Vec3(0.0f, 0.0f, 1.0f);
+		}
 	}
 
 	virtual void subscribeEvent(EventBus* eventBus) {
@@ -68,6 +71,9 @@ public:
 					if (pushDir.Dot(forward) > 0.0f) {
 						speed = 0.0f;
 					}
+					forward += event.contactNormal * forward.Dot(event.contactNormal);
+					forward = forward.normalize();
+					this->position -= pushDir * 0.01f;
 				}
 			}
 		);
@@ -116,7 +122,7 @@ public:
 		control(dt);
 
 		// change state based on speed
-		if (speed > 5.0f) {
+		if (speed > 6.0f) {
 			stateMachine.transitionTo("run", 0.3f);
 		}
 		else if (speed > 0.1f) {
@@ -152,7 +158,7 @@ public:
 			else {
 				// walking
 				speed += 10.0f * dt;
-				if (speed > 5.0f) speed = 5.0f;
+				if (speed > 6.0f) speed = 6.0f;
 			}
 			if (win->keys['W']) forward += camera->getForwardVector();
 			if (win->keys['S']) forward -= camera->getForwardVector();
@@ -171,7 +177,7 @@ public:
 
 		// catch chickens
 		static bool eKeyPressed = false;
-		if (win->keys['E']) {
+		if (win->keys['E'] || win->mouseButtons[0]) {
 			if (!isCatching && !eKeyPressed) {
 				// send catch event
 				PlayerCatchEvent catchEvent;
@@ -189,7 +195,7 @@ public:
 		}
 		// release chickens
 		static bool qKeyPressed = false;
-		if (win->keys['Q'] && !qKeyPressed) {
+		if (win->keys['Q'] || win->mouseButtons[1] && !qKeyPressed) {
 			if (isCatching) {
 				isCatching = false;
 				PlayerReleaseEvent releaseEvent;
@@ -254,7 +260,7 @@ public:
 			}
 			// if scared, move away from player
 			if (isScared) {
-				speed += 5.0f * dt;
+				speed += 10.0f * dt;
 				if (speed > 10.0f) speed = 10.0f;
 				Vec3 dir = position - player->position;
 				dir.v[1] = 0.0f; // keep on ground
@@ -278,23 +284,23 @@ public:
 			catchEventSent = false;
 		}
 		else{
-			// if catched, stick to player
-			speed = 0.0f;
-			rotation = player->rotation;
-			position = player->position + Vec3(0.0f, 3.0f, 0.0f);
-			if (!catchEventSent) {
-				// Send hen catched event
-				HenCatchedEvent catchedEvent;
-				catchedEvent.hen = this;
-				catchedEvent.player = player;
-				this->eventBus->queue<HenCatchedEvent>(catchedEvent);
-				catchEventSent = true;
+				// if catched, stick to player
+				speed = 0.0f;
+				rotation = player->rotation;
+				position = player->position + Vec3(0.0f, 3.0f, 0.0f);
+				if (!catchEventSent) {
+					// Send hen catched event
+					HenCatchedEvent catchedEvent;
+					catchedEvent.hen = this;
+					catchedEvent.player = player;
+					this->eventBus->queue<HenCatchedEvent>(catchedEvent);
+					catchEventSent = true;
+				}
 			}
-		}
 		
 		//update animation
 		stateMachine.update(dt);
-		updateWorldMatrix();
+		Actor::update(dt);
 	}
 
 	void subscribeEvent(EventBus* eventBus) override {
@@ -313,6 +319,9 @@ public:
 						speed = 0.0f;
 						forward = Vec3(rand() % 100 - 50.0f, 0.0f, rand() % 100 - 50.0f).normalize();
 					}
+					forward += event.contactNormal * forward.Dot(event.contactNormal);
+					forward = forward.normalize();
+					this->position -= pushDir * 0.01f;
 				}
 			}
 		);
@@ -328,12 +337,12 @@ public:
 					if (dot > 0.5f) {
 						// Hen is caught
 						isCatched = true;
-						speed = 0.0f;
-						stateMachine.transitionTo("swim eating", 0.1f);
-						object->position += Vec3(0.0f, 0.0f, 1.0f); // raise hen above player
+							speed = 0.0f;
+							stateMachine.transitionTo("swim eating", 0.1f);
+							object->position += Vec3(0.0f, 0.0f, 1.0f); // raise hen above player
+						}
 					}
 				}
-			}
 		);
 
 		// Subscribe to release events

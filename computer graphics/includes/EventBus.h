@@ -77,6 +77,7 @@ public:
 struct HitboxCollisionEvent : public Event {
     bool collided;
     Vec3 contactPoint;
+	Vec3 contactNormal;
     Actor* actorA;
     Actor* actorB;
 };

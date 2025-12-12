@@ -56,6 +56,12 @@ struct ANIMATED_VERTEX
 	float boneWeights[4];
 };
 
+struct UI_VERTEX
+{
+	float pos[2];
+	float uv[2];
+};
+
 STATIC_VERTEX addVertex(Vec3 p, Vec3 n, float tu, float tv)
 {
 	STATIC_VERTEX v;
@@ -133,6 +139,17 @@ public:
 				D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
 		};
 		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutInstanced, 8 };
+		return desc;
+	}
+
+	static const D3D12_INPUT_LAYOUT_DESC& getUILayout() {
+		static const D3D12_INPUT_ELEMENT_DESC inputLayoutUI[] = {
+			{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		};
+		static const D3D12_INPUT_LAYOUT_DESC desc = { inputLayoutUI, 2 };
 		return desc;
 	}
 };
@@ -218,6 +235,12 @@ public:
 	{
 		init(core, &vertices[0], sizeof(ANIMATED_VERTEX), vertices.size(), &indices[0], indices.size());
 		inputLayoutDesc = LayoutCache::getAnimatedLayout();
+	}
+
+	virtual void init(Core* core, std::vector<UI_VERTEX> vertices, std::vector<unsigned int> indices)
+	{
+		init(core, &vertices[0], sizeof(UI_VERTEX), vertices.size(), &indices[0], indices.size());
+		inputLayoutDesc = LayoutCache::getUILayout();
 	}
 
 	virtual void draw(Core* core, Shader* shader)
@@ -535,7 +558,9 @@ public:
 
 	void draw(Core* core) {
 		for (int i = 0; i < meshes.size(); i++) {
+			updateWorldMatrix();
 			psoManager->getShader(meshes[i]->psoNames)->updateAllConstantBuffers();
+			psoManager->getShader(meshes[i]->psoNames)->updateConstantBuffer("staticMeshBuffer", "W", &worldMatrix, VERTEX_SHADER);
 			psoManager->set(core, meshes[i]->psoNames);
 			meshes[i]->draw(core, psoManager->getShader(meshes[i]->psoNames));
 			psoManager->advance(meshes[i]->psoNames);

@@ -23,6 +23,7 @@ public:
 		HitboxCollisionEvent info;
 		info.collided = false;
 		info.contactPoint = Vec3(0.0f, 0.0f, 0.0f);
+		info.contactNormal = Vec3(0.0f, 0.0f, 0.0f);
 		info.actorA = nullptr;
 		info.actorB = nullptr;
 		if (position.v[0] + size.v[0] < other.position.v[0] - other.size.v[0] ||
@@ -39,10 +40,11 @@ public:
 		}
 		info.collided = true;
 		info.contactPoint = Vec3(
-			(position.v[0] + other.position.v[0]) * (size.v[0] / (size.v[0] + other.size.v[0])),
-			(position.v[1] + other.position.v[1]) * (size.v[1] / (size.v[1] + other.size.v[1])),
-			(position.v[2] + other.position.v[2]) * (size.v[2] / (size.v[2] + other.size.v[2]))
+			(position.v[0] * other.size.v[0] + other.position.v[0] * size.v[0]) / (size.v[0] + other.size.v[0]),
+			(position.v[1] * other.size.v[1] + other.position.v[1] * size.v[1]) / (size.v[1] + other.size.v[1]),
+			(position.v[2] * other.size.v[2] + other.position.v[2] * size.v[2]) / (size.v[2] + other.size.v[2])
 		);
+		info.contactNormal = (other.position - position).normalize();
 		info.actorA = parent;
 		info.actorB = other.parent;
 		return info;
@@ -57,7 +59,7 @@ public:
 		}
 	}
 
-	void registeEvent(EventBus* eventBus, HitboxCollisionEvent info) {
+	void queueEvent(EventBus* eventBus, HitboxCollisionEvent info) {
 		if (eventBus != nullptr) {
 			eventBus->queue<HitboxCollisionEvent>(info);
 		}
@@ -88,8 +90,13 @@ public:
 			for (size_t j = i + 1; j < hitboxes.size(); j++) {
 				HitboxCollisionEvent info = hitboxes[i]->checkCollision(*hitboxes[j]);
 				if (info.collided) {
-					hitboxes[i]->registeEvent(eventBus, info);
-					hitboxes[j]->registeEvent(eventBus, info);
+					if (info.actorA != nullptr || info.actorB != nullptr) {
+						/*DebugPrint("Collision between Actor A and Actor B, contant point: (" +
+							std::to_string(info.contactPoint.v[0]) + ", " +
+							std::to_string(info.contactPoint.v[1]) + ", " +
+							std::to_string(info.contactPoint.v[2]) + ")");*/
+						hitboxes[i]->queueEvent(eventBus, info);
+					}
 				}
 			}
 		}

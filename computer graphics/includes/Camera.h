@@ -15,7 +15,7 @@ public:
 	float clipNear;
 	float clipFar;
 
-	Camera() : position(0.0f, 10.0f, 3.0f), target(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), fov(90.0f), clipNear(0.01f), clipFar(100.0f) {
+	Camera() : position(0.0f, 10.0f, 3.0f), target(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), fov(90.0f), clipNear(0.01f), clipFar(200.0f) {
 	}
 
 	Mat4 getLookatMatrix()
@@ -107,10 +107,10 @@ public:
 		static float pitch = 20.0f;
 		yaw += xoffset;
 		pitch += yoffset;
-		if (pitch > 89.0f)
-			pitch = 89.0f;
-		if (pitch < -89.0f)
-			pitch = -89.0f;
+		if (pitch > 85.0f)
+			pitch = 85.0f;
+		if (pitch < -85.0f)
+			pitch = -85.0f;
 		float radius = 4.0f;
 		position.v[0] = target.v[0] + radius * cosf(yaw * (float)M_PI / 180.0f) * cosf(pitch * (float)M_PI / 180.0f);
 		position.v[1] = target.v[1] + radius * sinf(pitch * (float)M_PI / 180.0f);

@@ -52,6 +52,9 @@ public:
 	Vec3 normalize(void)
 	{
 		float len = 1.0f / sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+		if (len == INFINITY) {
+			len = 0.0f;
+		}
 		return Vec3(v[0] * len, v[1] * len, v[2] * len);
 	}
 	float normalize_GetLength()
@@ -146,6 +149,9 @@ public:
 
 	Vec4 normalize(void) {
 		float len = 1.0f / sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3]);
+		if (len == INFINITY) {
+			len = 0.0f;
+		}
 		return Vec4(v[0] * len, v[1] * len, v[2] * len, v[3] * len);
 	}
 

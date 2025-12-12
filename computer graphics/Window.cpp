@@ -74,14 +74,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	}
 	case WM_LBUTTONDOWN:
 	{
-		window->updateMouse(WINDOW_GET_X_LPARAM(lParam), WINDOW_GET_Y_LPARAM(lParam));
 		window->mouseButtons[0] = true;
 		return 0;
 	}
 	case WM_LBUTTONUP:
 	{
-		window->updateMouse(WINDOW_GET_X_LPARAM(lParam), WINDOW_GET_Y_LPARAM(lParam));
 		window->mouseButtons[0] = false;
+		return 0;
+	}
+	case WM_RBUTTONDOWN:
+	{
+		window->mouseButtons[1] = true;
+		return 0;
+	}
+	case WM_RBUTTONUP:
+	{
+		window->mouseButtons[1] = false;
 		return 0;
 	}
 	case WM_MOUSEMOVE:

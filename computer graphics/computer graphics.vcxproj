@@ -141,6 +141,7 @@
     <ClInclude Include="includes\Mesh.h" />
     <ClInclude Include="includes\Shader.h" />
     <ClInclude Include="includes\Operators.h" />
+    <ClInclude Include="includes\UI.h" />
     <ClInclude Include="includes\Vector.h" />
     <ClInclude Include="includes\Window.h" />
   </ItemGroup>

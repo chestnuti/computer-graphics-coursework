@@ -92,3 +92,17 @@ Vec4 quatFromTo(Vec3 a, Vec3 b) {
 	Vec4 q(w.v[0], w.v[1], w.v[2], 1 + c);
 	return q.normalize();
 }
+
+
+
+
+//pseudo-random hash function to generate random value based on position and seed, make sure the same position with same seed always generate the same value
+int generateRandomValue(int x, int y, int seed)
+{
+	unsigned int h = seed;
+	h ^= 0x9e3779b9 + (x << 6) + (x >> 2); // mix x into h
+	h ^= 0x85ebca6b + (y << 6) + (y >> 2); // mix y into h
+	h *= 0x27d4eb2d; // multiply by a large prime
+	h ^= (h >> 15); // final avalanche
+	return h % 100;
+}
