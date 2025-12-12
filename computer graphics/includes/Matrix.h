@@ -5,6 +5,7 @@
 #include <iostream>
 #include <math.h>
 
+class Vec3;
 class Vec4;
 
 class Mat4 {
@@ -167,6 +168,26 @@ public:
 		float s = sinf(rad);
 		mat.m[0][0] = c;  mat.m[0][1] = -s;
 		mat.m[1][0] = s;  mat.m[1][1] = c;
+		return mat;
+	}
+	template<typename T>
+	Mat4 Rotate(float angle, T axis)
+	{
+		Mat4 mat = _Identity();
+		float rad = angle * (float)M_PI / 180.0f;
+		float c = cosf(rad);
+		float s = sinf(rad);
+		float t = 1.0f - c;
+		axis = axis.normalize();
+		mat.m[0][0] = c + axis.v[0] * axis.v[0] * t;
+		mat.m[0][1] = axis.v[0] * axis.v[1] * t - axis.v[2] * s;
+		mat.m[0][2] = axis.v[0] * axis.v[2] * t + axis.v[1] * s;
+		mat.m[1][0] = axis.v[1] * axis.v[0] * t + axis.v[2] * s;
+		mat.m[1][1] = c + axis.v[1] * axis.v[1] * t;
+		mat.m[1][2] = axis.v[1] * axis.v[2] * t - axis.v[0] * s;
+		mat.m[2][0] = axis.v[2] * axis.v[0] * t - axis.v[1] * s;
+		mat.m[2][1] = axis.v[2] * axis.v[1] * t + axis.v[0] * s;
+		mat.m[2][2] = c + axis.v[2] * axis.v[2] * t;
 		return mat;
 	}
 	Mat4 Translate(float x, float y, float z)

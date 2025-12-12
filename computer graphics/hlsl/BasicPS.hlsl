@@ -19,7 +19,7 @@ float4 PS(PS_INPUT input) : SV_Target0
 {
     float4 texColor = float4(1.0, 1.0, 1.0, 1.0);
     float3 shadowColor = float3(0.1, 0.2, 0.3);
-    float3 lightColor = float3(1.0, 1.0, 0.5);
+    float3 lightColor = float3(1.0, 0.7, 0.5);
     if (useTexture)
     {   
         texColor = diffuseTexture.Sample(samplerState, input.TexCoords);

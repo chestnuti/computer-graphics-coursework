@@ -38,6 +38,7 @@ public:
 	// params
 	Mat4 VP = camera.getViewProjectionMatrix();
 	Mat4 W = Mat4()._Identity();
+	Vec3 playerPos = Vec3(0.0f, 0.0f, 0.0f);
 	Mat4 skyboxBuffer_W;
 	float animationTransition = 0.0f;
 	Vec4 lightDirection = Vec4(-1.0f, -1.0f, 0.0f, 0.0f).normalize();
@@ -168,7 +169,7 @@ public:
 		grass007->setDiffuseTexture(imageLoader.getImage("ColorMap"));
 		// create instance data
 		std::vector<InstanceData> instanceDatas2;
-		for (int i = 0; i < 1000; i++) {
+		for (int i = 0; i < 2000; i++) {
 			InstanceData inst;
 			float randX = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 120.0f;
 			float randZ = ((float)(rand() % 1000) / 1000.0f - 0.5f) * 120.0f;
@@ -203,7 +204,7 @@ public:
 		}
 		// create instanced object
 		InstancedObject* instanced_grass008 = new InstancedObject(&psos);
-		instanced_grass008->init(core, grass008, instanceDatas2);
+		instanced_grass008->init(core, grass008, instanceDatas3);
 		// add to world objects
 		instanceDataMap.insert({ "grass008", instanceDatas3 });
 		instancedObjects.insert({ "grass008", *instanced_grass008 });
@@ -216,6 +217,7 @@ public:
 		shaderManager.setConstantBufferValuePointer("skyboxShader", "skyboxBuffer", "VP", &VP, VERTEX_SHADER);
 		shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "W", &W, VERTEX_SHADER);
 		shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
+		shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "playerPosition", &playerPos, VERTEX_SHADER);
 
 		shaderManager.setConstantBufferValuePointer("animatedShader", "basicPSBuffer", "lightDirection", &lightDirection, PIXEL_SHADER);
 		shaderManager.setConstantBufferValuePointer("basicShader", "basicPSBuffer", "lightDirection", &lightDirection, PIXEL_SHADER);
@@ -240,6 +242,17 @@ public:
 			actors->update(dt);
 			VP = camera.getViewProjectionMatrix();
 			skyboxBuffer_W = Mat4().Translate(camera.position.v[0], camera.position.v[1], camera.position.v[2]) * Mat4().Scale(camera.clipFar - 1, camera.clipFar - 1, camera.clipFar - 1);
+			playerPos = player->position;
+			std::vector<InstanceData> grass003_update = RotateInstanceObjectByPlayer("grass003");
+			std::vector<InstanceData> grass007_update = RotateInstanceObjectByPlayer("grass007");
+			std::vector<InstanceData> grass008_update = RotateInstanceObjectByPlayer("grass008");
+			std::unordered_map<std::string, std::vector<InstanceData>> updatedInstanceDataMap = 
+			{
+				{"ground", instanceDataMap["ground"] },
+				{"grass003", grass003_update },
+				{"grass007", grass007_update },
+				{"grass008", grass008_update }
+			};
 
 			// update hitboxes
 			hitboxManager.update();
@@ -253,7 +266,7 @@ public:
 
 			// update instance buffer
 			for (auto& [name, instancedObject] : instancedObjects) {
-				instancedObject.updateInstances(instanceDataMap[name]);
+				instancedObject.updateInstances(updatedInstanceDataMap[name]);
 			}
 
 			// set samplers
@@ -281,4 +294,27 @@ public:
 			core->finishFrame();
 		}
 	}
+
+	std::vector<InstanceData> RotateInstanceObjectByPlayer(const std::string& objectName) {
+		std::vector<InstanceData> updatedInstanceData;
+		Vec3 playerPos = this->player->position;
+		auto it = instanceDataMap.find(objectName);
+		if (it != instanceDataMap.end()) {
+			for (size_t i = 0; i < it->second.size(); i++) {
+				Mat4 instanceWorld = it->second[i].World.Transpose();
+				Vec3 instancePos = Vec3(instanceWorld.m[0][3], instanceWorld.m[1][3], instanceWorld.m[2][3]);
+				Vec3 dir = playerPos - instancePos;
+				float length = dir.getLength() + 0.3;
+				length *= length;
+				Vec3 axis = Vec3(0.0f, 1.0f, 0.0f).cross(dir).normalize();
+				Mat4 rotationMat = Mat4().Rotate(20.0f * expf(-length / 5.0f), axis);
+				Mat4 newWorld = Mat4().Translate(instancePos.v[0], instancePos.v[1], instancePos.v[2]) * rotationMat * Mat4().Scale(instanceWorld.m[0][0], instanceWorld.m[1][1], instanceWorld.m[2][2]);
+				InstanceData newInst;
+				newInst.World = newWorld.Transpose();
+				updatedInstanceData.push_back(newInst);
+			}
+		}
+		return updatedInstanceData;
+	}
+
 };
