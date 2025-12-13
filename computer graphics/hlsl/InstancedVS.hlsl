@@ -31,9 +31,7 @@ float remap(float value, float inputMin, float inputMax, float outputMin, float 
 }
 
 
-// ------------------------------------
 // 32-bit integer hash (Wang-like)
-// ------------------------------------
 uint wang_hash(uint x)
 {
     x = (x ^ 61u) ^ (x >> 16);
@@ -77,7 +75,7 @@ float3 sampleFeaturePoint(int3 cell, float jitter)
 // ------------------------------------
 // worley3D: returns float2(F1, F2)
 // uvw : 3D position * frequency
-// jitter: 0..1 (1 = fully random inside cell)
+// jitter: 0-1 (1 = fully random inside cell)
 // useManhattan: optional distance metric
 // ------------------------------------
 float2 worley3D(float3 uvw, float jitter, bool useManhattan)
@@ -143,6 +141,7 @@ PS_INPUT VS(VS_INPUT input)
     PS_INPUT output;
     output.Pos = mul(input.Pos, world);
     
+    // Apply custom translation towards player
     float3 toPlayer = playerPosition - output.Pos.xyz + float3(0, 2, 0);
     float len = length(toPlayer) + 0.3;
     len *= len;
@@ -154,6 +153,7 @@ PS_INPUT VS(VS_INPUT input)
         -toPlayer.x * exp(-toPlayer.y / 3), 0, -toPlayer.z * exp(-toPlayer.y / 3), 1
     );
     
+    // Apply worley noise based translation
     float4x4 worleyTranslation = float4x4(
         1, 0, 0, 0,
         0, 1, 0, 0,

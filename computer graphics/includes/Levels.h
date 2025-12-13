@@ -12,6 +12,128 @@
 #include "UI.h"
 #include "GamesEngineeringBase.h"
 #include "GEMLoader.h"
+#include <direct.h>
+
+#define HEN_BROWN "Models/AnimatedLowPolyAnimals/Hen-brown.gem"
+#define HEN_WHITE "Models/AnimatedLowPolyAnimals/Hen-white.gem"
+#define ROOSTER_DARK "Models/AnimatedLowPolyAnimals/Rooster-dark.gem"
+#define ROOSTER_BROWN "Models/AnimatedLowPolyAnimals/Rooster-brown.gem"
+
+#define SAVE_DIR "Levels/"
+
+
+
+class LevelManager {
+public:
+	LevelManager() {}
+
+	static bool WriteToFile(const std::string& filename, int scoreToWin, const std::vector<Actor>& actors)
+	{
+		if (actors.size() != scoreToWin) {
+			throw "Actor count does not match scoreToWin\n";
+			return false;
+		}
+
+		std::string savePath = SAVE_DIR + filename;
+
+		createFileIfNotExists(filename, scoreToWin, actors);
+
+		std::ofstream file(savePath);
+		if (!file.is_open()) {
+			throw "Failed to open file for writing\n";
+			return false;
+		}
+
+		// write scoreToWin
+		file << scoreToWin << "\n";
+
+		// write actor data
+		for (const auto& actor : actors) {
+			file << actor.type << "\n";
+
+			file << actor.position.v[0] << " "
+				<< actor.position.v[1] << " "
+				<< actor.position.v[2] << "\n";
+
+			file << actor.rotation.v[0] << " "
+				<< actor.rotation.v[1] << " "
+				<< actor.rotation.v[2] << " "
+				<< actor.rotation.v[3] << "\n";
+
+			file << actor.scale.v[0] << " "
+				<< actor.scale.v[1] << " "
+				<< actor.scale.v[2] << "\n";
+		}
+
+		file.close();
+		return true;
+	}
+
+
+	template<typename AT>
+	static std::vector<AT*> ReadFromFile(const std::string& filename, int& scoreToWin)
+	{
+		std::vector<AT*> actors;
+
+		std::string loadPath = SAVE_DIR + filename;
+
+		std::ifstream file(loadPath);
+		if (!file.is_open()) {
+			throw "Failed to open file for reading\n";
+			return actors;
+		}
+
+		// read scoreToWin
+		file >> scoreToWin;
+
+		actors.clear();
+		actors.reserve(scoreToWin);
+
+		for (int i = 0; i < scoreToWin; ++i) {
+			AT* actor = new AT();
+
+			file >> actor->type;
+
+			file >> actor->position.v[0]
+				>> actor->position.v[1]
+				>> actor->position.v[2];
+
+			file >> actor->rotation.v[0]
+				>> actor->rotation.v[1]
+				>> actor->rotation.v[2]
+				>> actor->rotation.v[3];
+
+			file >> actor->scale.v[0]
+				>> actor->scale.v[1]
+				>> actor->scale.v[2];
+
+			actors.push_back(actor);
+		}
+
+		file.close();
+		return actors;
+	}
+
+	static bool checkFileExists(const std::string& filename) {
+		std::string filepath = SAVE_DIR + filename;
+		std::ifstream file(filepath);
+		return file.good();
+	}
+
+	static bool createFileIfNotExists(const std::string& filename, int scoreToWin, const std::vector<Actor>& defaultActors) {
+		std::string filepath = SAVE_DIR + filename;
+		if (!checkFileExists(filepath)) {
+			if (_mkdir(filepath.c_str()) == -1 && errno != EEXIST) {
+				throw "Failed to create directory\n";
+				return false;
+			}
+			return true;
+		}
+		return true;
+	}
+};
+
+
 
 
 class GameContext {
@@ -28,6 +150,7 @@ class GameContext {
 	ImageLoader imageLoader = ImageLoader(core);
 	HitboxManager hitboxManager = HitboxManager(&eventBus);
 	UIManager uiManager = UIManager(&psos);
+	LevelManager levelManager = LevelManager();
 
 public:
 	// actors and objects
@@ -36,7 +159,6 @@ public:
 	Object* skybox;
 	std::vector<Object> worldObjects;
 	std::unordered_map<std::string, InstancedObject> instancedObjects;
-	std::vector<UIPlane> uis;
 
 	// params
 	Mat4 VP = camera.getViewProjectionMatrix();
@@ -46,13 +168,21 @@ public:
 	float animationTransition = 0.0f;
 	Vec4 lightDirection = Vec4(-1.0f, -1.0f, 0.0f, 0.0f).normalize();
 	std::unordered_map<std::string, std::vector<InstanceData>> instanceDataMap;
-	float uiOffset[2] = { 0.0f, 0.0f };
-	float uiScale[2] = { 1.0f, 1.0f };
 	float time = 0.0f;
+
+	// game context methods
+	int gameState = 0; // 0 - playing, 1 - win, 2 - lose
+	int score = 0;
+	int scoreToWin = 20;
+	int timeLimit = 300; // seconds
 
 	GameContext(Core* _core, Window* _win) : core(_core), win(_win) {}
 
 	void init() {
+		// Subscribe event handlers
+		subscribeEventHandlers();
+
+		// Create shaders
 		shaderManager.createShader(core, "animatedShader", "./hlsl/AnimatedVS.hlsl", "./hlsl/BasicPS.hlsl");
 		shaderManager.createShader(core, "basicShader", "./hlsl/BasicVS.hlsl", "./hlsl/BasicPS.hlsl");
 		shaderManager.createShader(core, "skyboxShader", "./hlsl/Skybox.hlsl", "./hlsl/Skybox.hlsl");
@@ -76,13 +206,35 @@ public:
 		imageLoader.loadImage("ColorMap", "Models/LowPolyMilitary/Textures/Textures1_ALB.png");
 		imageLoader.loadImage("AnimalsColorMap", "Models/AnimatedLowPolyAnimals/Textures/T_Animalstextures_alb.png");
 		imageLoader.loadImage("AnimalsNormalMap", "Models/AnimatedLowPolyAnimals/Textures/T_Animalstextures_nh.png");
+		imageLoader.loadImage("Bamboo", "Models/TreeModels/Textures/bamboo branch_ALB.png");
+		imageLoader.loadImage("Bamboo_Normal", "Models/TreeModels/Textures/bamboo branch_NH.png");
+		imageLoader.loadImage("Bamboo_branch", "Models/TreeModels/Textures/plant02_ALB.png");
+		imageLoader.loadImage("Bamboo_branch_Normal", "Models/TreeModels/Textures/plant02_NH.png");
+		// UI Images
 		imageLoader.loadImage("UI_Time", "UI/Time.png");
-		
+		imageLoader.loadImage("UI_Score", "UI/Score.png");
+		imageLoader.loadImage("Number_0", "UI/Numbers/0.png");
+		imageLoader.loadImage("Number_1", "UI/Numbers/1.png");
+		imageLoader.loadImage("Number_2", "UI/Numbers/2.png");
+		imageLoader.loadImage("Number_3", "UI/Numbers/3.png");
+		imageLoader.loadImage("Number_4", "UI/Numbers/4.png");
+		imageLoader.loadImage("Number_5", "UI/Numbers/5.png");
+		imageLoader.loadImage("Number_6", "UI/Numbers/6.png");
+		imageLoader.loadImage("Number_7", "UI/Numbers/7.png");
+		imageLoader.loadImage("Number_8", "UI/Numbers/8.png");
+		imageLoader.loadImage("Number_9", "UI/Numbers/9.png");
+		imageLoader.loadImage("UI_bar", "UI/Bar.png");
+
+
 		// add boundary
-		hitboxManager.addHitbox(nullptr, Vec3(60.0f, 0.0f, 0.0f), Vec3(1.0f, 1.0f, 60.0f));
-		hitboxManager.addHitbox(nullptr, Vec3(-60.0f, 0.0f, 0.0f), Vec3(1.0f, 1.0f, 60.0f));
-		hitboxManager.addHitbox(nullptr, Vec3(0.0f, 0.0f, 60.0f), Vec3(60.0f, 1.0f, 1.0f));
-		hitboxManager.addHitbox(nullptr, Vec3(0.0f, 0.0f, -60.0f), Vec3(60.0f, 1.0f, 1.0f));
+		hitboxManager.addHitbox(nullptr, Vec3(60.0f, 0.0f, 0.0f), Vec3(2.0f, 5.0f, 60.0f));
+		hitboxManager.addHitbox(nullptr, Vec3(-60.0f, 0.0f, 0.0f), Vec3(2.0f, 5.0f, 60.0f));
+		hitboxManager.addHitbox(nullptr, Vec3(0.0f, 0.0f, 60.0f), Vec3(60.0f, 5.0f, 2.0f));
+		hitboxManager.addHitbox(nullptr, Vec3(0.0f, 0.0f, -60.0f), Vec3(60.0f, 5.0f, 2.0f));
+		hitboxManager.addHitbox(nullptr, Vec3(60.0f, 0.0f, 60.0f), Vec3(2.0f, 5.0f, 2.0f));
+		hitboxManager.addHitbox(nullptr, Vec3(-60.0f, 0.0f, 60.0f), Vec3(2.0f, 5.0f, 2.0f));
+		hitboxManager.addHitbox(nullptr, Vec3(60.0f, 0.0f, -60.0f), Vec3(2.0f, 5.0f, 2.0f));
+		hitboxManager.addHitbox(nullptr, Vec3(-60.0f, 0.0f, -60.0f), Vec3(2.0f, 5.0f, 2.0f));
 
 		// Load Player
 		Object* player = new Object(&psos);
@@ -98,19 +250,35 @@ public:
 		hitboxManager.addHitbox(this->player, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.7f, 1.0f, 0.7f));
 		this->player->subscribeEvent(&eventBus);
 
-		// NPCs
+		// Hens
 		this->actors = new ActorList();
-		for (int i = 0; i < 20; i++) {
-			Object* hen_brown = new Object(&psos);
-			hen_brown->loadGEM(core, "Models/AnimatedLowPolyAnimals/Hen-brown.gem", "animatedPSO");
-			hen_brown->setDiffuseTexture(imageLoader.getImage("AnimalsColorMap"));
-			hen_brown->setNormalTexture(imageLoader.getImage("AnimalsNormalMap"));
-			hen_brown->rotateBy(180.0f, Y_AXIS);
-			hen_brown->scale = Vec3(0.05f, 0.05f, 0.05f);
+		for (int i = 0; i < scoreToWin; i++) {
+			Object* hen = new Object(&psos);
+			// randomly select hen model
+			int r = rand() % 4;
+			switch (r) {
+			case 0:
+				hen->loadGEM(core, HEN_BROWN, "animatedPSO");
+				break;
+			case 1:
+				hen->loadGEM(core, HEN_WHITE, "animatedPSO");
+				break;
+			case 2:
+				hen->loadGEM(core, ROOSTER_DARK, "animatedPSO");
+				break;
+			case 3:
+				hen->loadGEM(core, ROOSTER_BROWN, "animatedPSO");
+				break;
+			}
+			hen->setDiffuseTexture(imageLoader.getImage("AnimalsColorMap"));
+			hen->setNormalTexture(imageLoader.getImage("AnimalsNormalMap"));
+			hen->rotateBy(180.0f, Y_AXIS);
+			hen->scale = Vec3(0.05f, 0.05f, 0.05f);
 			Hen* henActor = new Hen();
-			henActor->init(hen_brown);
+			henActor->init(hen);
 			henActor->setPlayer(this->player);
-			henActor->position = Vec3(((float)(rand() % 1000) / 1000.0f - 0.5) * 50.0f, 0.0f, ((float)(rand() % 1000) / 1000.0f - 0.5) * 50.0f);
+			henActor->type = r;	// save hen type
+			henActor->position = Vec3(((float)(rand() % 1000) / 1000.0f - 0.5) * 100.0f, 0.0f, ((float)(rand() % 1000) / 1000.0f - 0.5) * 100.0f);
 			// subscribe to events
 			henActor->subscribeEvent(&eventBus);
 			// add hitbox
@@ -236,19 +404,22 @@ public:
 		instanceDataMap.insert({ "grass008", instanceDatas3 });
 		instancedObjects.insert({ "grass008", *instanced_grass008 });
 
-		// Load Trees
-		Object* tree012 = new Object(&psos);
-		tree012->loadGEM(core, "Models/LowPolyMilitary/tree_012.gem", "instancedStaticPSO");
-		tree012->setDiffuseTexture(imageLoader.getImage("ColorMap"));
+		// Load Bamboo
+		Object* bamboo = new Object(&psos);
+		bamboo->loadGEM(core, "Models/TreeModels/bamboo.gem", "instancedPSO");
+		bamboo->meshes[1]->setDiffuseTexture(imageLoader.getImage("Bamboo"));
+		bamboo->meshes[1]->setNormalTexture(imageLoader.getImage("Bamboo_Normal"));
+		bamboo->meshes[0]->setDiffuseTexture(imageLoader.getImage("Bamboo_branch"));
+		bamboo->meshes[0]->setNormalTexture(imageLoader.getImage("Bamboo_branch_Normal"));
 		// create instance data
-		std::vector<InstanceData> treeInstanceDatas;
+		std::vector<InstanceData> bambooInstanceDatas;
 		for (int i = 0; i < 40; i++) {
 			InstanceData inst;
 			float randRotation = ((float)(rand() % 1000) / 1000.0f) * 360.0f;
 			float randScale = ((float)(rand() % 1000) / 1000.0f) * 0.05f + 0.02f;
 			inst.World = Mat4().Translate(61, 0, 3 * i - 60) * Mat4().RotateY(randRotation) * Mat4().Scale(randScale, randScale, randScale);
 			inst.World = inst.World.Transpose();
-			treeInstanceDatas.push_back(inst);
+			bambooInstanceDatas.push_back(inst);
 		}
 		for (int i = 0; i < 40; i++) {
 			InstanceData inst;
@@ -256,7 +427,7 @@ public:
 			float randScale = ((float)(rand() % 1000) / 1000.0f) * 0.05f + 0.02f;
 			inst.World = Mat4().Translate(-61, 0, 3 * i - 60) * Mat4().RotateY(randRotation) * Mat4().Scale(randScale, randScale, randScale);
 			inst.World = inst.World.Transpose();
-			treeInstanceDatas.push_back(inst);
+			bambooInstanceDatas.push_back(inst);
 		}
 		for (int i = 0; i < 40; i++) {
 			InstanceData inst;
@@ -264,7 +435,7 @@ public:
 			float randScale = ((float)(rand() % 1000) / 1000.0f) * 0.05f + 0.02f;
 			inst.World = Mat4().Translate(3 * i - 60, 0, 61) * Mat4().RotateY(randRotation) * Mat4().Scale(randScale, randScale, randScale);
 			inst.World = inst.World.Transpose();
-			treeInstanceDatas.push_back(inst);
+			bambooInstanceDatas.push_back(inst);
 		}
 		for (int i = 0; i < 40; i++) {
 			InstanceData inst;
@@ -272,17 +443,27 @@ public:
 			float randScale = ((float)(rand() % 1000) / 1000.0f) * 0.05f + 0.02f;
 			inst.World = Mat4().Translate(3 * i - 60, 0, -61) * Mat4().RotateY(randRotation) * Mat4().Scale(randScale, randScale, randScale);
 			inst.World = inst.World.Transpose();
-			treeInstanceDatas.push_back(inst);
+			bambooInstanceDatas.push_back(inst);
 		}
 		// create instanced object
-		InstancedObject* instanced_tree012 = new InstancedObject(&psos);
-		instanced_tree012->init(core, tree012, treeInstanceDatas);
+		InstancedObject* instanced_bamboo = new InstancedObject(&psos);
+		instanced_bamboo->init(core, bamboo, bambooInstanceDatas);
 		// add to world objects
-		instanceDataMap.insert({ "tree012", treeInstanceDatas });
-		instancedObjects.insert({ "tree012", *instanced_tree012 });
+		instanceDataMap.insert({ "bamboo", bambooInstanceDatas });
+		instancedObjects.insert({ "bamboo", *instanced_bamboo });
 
 		// Create UI elements
-		uiManager.addUIPlane(core, 0.8f, 0.8f, 0.15f, 0.15f, imageLoader.getImage("UI_Time"));
+		uiManager.addUIPlane(core, -0.9f, 0.8f, 0.25f, 0.2f, imageLoader.getImage("UI_Score"), "UI_Score");
+		uiManager.addUIPlane(core, -0.9f, 0.6f, 0.05f, 0.2f, imageLoader.getImage("Number_0"), "UI_Score_Tens");
+		uiManager.addUIPlane(core, -0.85f, 0.6f, 0.05f, 0.2f, imageLoader.getImage("Number_0"), "UI_Score_Ones");
+		uiManager.addUIPlane(core, -0.75f, 0.6f, 0.01f, 0.2f, imageLoader.getImage("UI_bar"), "UI_Score_Space");
+		uiManager.addUIPlane(core, -0.7f, 0.6f, 0.05f, 0.2f, imageLoader.getImage("Number_0"), "UI_Score_To_Win_Tens");
+		uiManager.addUIPlane(core, -0.65f, 0.6f, 0.05f, 0.2f, imageLoader.getImage("Number_0"), "UI_Score_To_Win_Ones");
+		uiManager.addUIPlane(core, 0.7f, 0.8f, 0.2f, 0.2f, imageLoader.getImage("UI_Time"), "UI_Time");
+		uiManager.addUIPlane(core, 0.7f, 0.6f, 0.05f, 0.2f, imageLoader.getImage("Number_0"), "UI_Time_Hundreds");
+		uiManager.addUIPlane(core, 0.75f, 0.6f, 0.05f, 0.2f, imageLoader.getImage("Number_0"), "UI_Time_Tens");
+		uiManager.addUIPlane(core, 0.8f, 0.6f, 0.05f, 0.2f, imageLoader.getImage("Number_0"), "UI_Time_Ones");
+		
 
 		// set constant buffer pointers
 		shaderManager.setConstantBufferValuePointer("animatedShader", "animatedMeshBuffer", "VP", &VP, VERTEX_SHADER);
@@ -296,8 +477,6 @@ public:
 		shaderManager.setConstantBufferValuePointer("instancedShader", "staticMeshBuffer", "time", &time, VERTEX_SHADER);
 		shaderManager.setConstantBufferValuePointer("instancedStaticShader", "staticMeshBuffer", "W", &W, VERTEX_SHADER);
 		shaderManager.setConstantBufferValuePointer("instancedStaticShader", "staticMeshBuffer", "VP", &VP, VERTEX_SHADER);
-		shaderManager.setConstantBufferValuePointer("uiShader", "UIBuffer", "uioffset", &uiOffset, VERTEX_SHADER);
-		shaderManager.setConstantBufferValuePointer("uiShader", "UIBuffer", "uiscale", &uiScale, VERTEX_SHADER);
 
 		shaderManager.setConstantBufferValuePointer("animatedShader", "basicPSBuffer", "lightDirection", &lightDirection, PIXEL_SHADER);
 		shaderManager.setConstantBufferValuePointer("basicShader", "basicPSBuffer", "lightDirection", &lightDirection, PIXEL_SHADER);
@@ -331,17 +510,33 @@ public:
 
 	void update() {
 		static bool running = true;
-		while (running) {
+		while (gameState == 0) {
 			if (!running) return;
-
-			core->beginFrame();
 
 			win->processMessages();
 			if (win->keys[VK_ESCAPE]) running = false;
 
-			// make lights orbit around center of screen
+			// updatte time
 			float dt = timer.dt();
 			time += dt;
+
+			// update UI
+			int Score_Tens = score / 10;
+			int Score_Ones = score % 10;
+			int ScoreToWin_Tens = scoreToWin / 10;
+			int ScoreToWin_Ones = scoreToWin % 10;
+			uiManager.setTexture("UI_Score_Tens", imageLoader.getImage("Number_" + std::to_string(Score_Tens)));
+			uiManager.setTexture("UI_Score_Ones", imageLoader.getImage("Number_" + std::to_string(Score_Ones)));
+			uiManager.setTexture("UI_Score_To_Win_Tens", imageLoader.getImage("Number_" + std::to_string(ScoreToWin_Tens)));
+			uiManager.setTexture("UI_Score_To_Win_Ones", imageLoader.getImage("Number_" + std::to_string(ScoreToWin_Ones)));
+			int timeLeft = timeLimit - (int)time;
+			if (timeLeft < 0) timeLeft = 0;
+			int Time_Hundreds = timeLeft / 100;
+			int Time_Tens = (timeLeft / 10) % 10;
+			int Time_Ones = timeLeft % 10;
+			uiManager.setTexture("UI_Time_Hundreds", imageLoader.getImage("Number_" + std::to_string(Time_Hundreds)));
+			uiManager.setTexture("UI_Time_Tens", imageLoader.getImage("Number_" + std::to_string(Time_Tens)));
+			uiManager.setTexture("UI_Time_Ones", imageLoader.getImage("Number_" + std::to_string(Time_Ones)));
 
 			// update parameters
 			player->update(dt);
@@ -358,7 +553,7 @@ public:
 				{"grass003", grass003_update },
 				{"grass007", grass007_update },
 				{"grass008", grass008_update },
-				{"tree012", instanceDataMap["tree012"] }
+				{"bamboo", instanceDataMap["bamboo"] }
 			};
 			// update hitbox debug draw positions
 			/*for (int i = 0; i < hitboxManager.hitboxes.size(); i++) {
@@ -368,9 +563,9 @@ public:
 			// update hitboxes
 			hitboxManager.update();
 
-			// dispatch events
-			eventBus.dispatch();
 
+			// begin frame
+			core->beginFrame();
 
 			core->beginRenderPass();
 
@@ -406,6 +601,12 @@ public:
 			uiManager.draw(core);
 
 			core->finishFrame();
+
+			// manage score and win condition
+			ScoreManager();
+
+			// dispatch events
+			eventBus.dispatch();
 		}
 	}
 
@@ -415,7 +616,8 @@ public:
 		auto it = instanceDataMap.find(objectName);
 		if (it != instanceDataMap.end()) {
 			for (size_t i = 0; i < it->second.size(); i++) {
-				Mat4 instanceWorld = it->second[i].World.Transpose();
+				// calculate rotation based on distance to player
+				Mat4 instanceWorld = it->second[i].World.Transpose();	
 				Vec3 instancePos = Vec3(instanceWorld.m[0][3], instanceWorld.m[1][3], instanceWorld.m[2][3]);
 				Vec3 dir = playerPos - instancePos;
 				float length = dir.getLength() + 0.3;
@@ -431,4 +633,79 @@ public:
 		return updatedInstanceData;
 	}
 
+	void ScoreManager() {
+		int _score = 0;
+		// calculate score
+		for (int i = 0; i < actors->numActors; i++) {
+			Hen* hen = dynamic_cast<Hen*>(actors->getActorAt(i));
+			if (hen->position.v[0] < 17.5f && hen->position.v[0] > -17.5f &&
+				hen->position.v[2] < 7.7f && hen->position.v[2] > -12.5f) {
+				_score++;
+			}
+		}
+		score = _score;
+		// check win condition
+		if (score >= scoreToWin) {
+			WinConditionEvent winEvent;
+			winEvent.player = player;
+			winEvent.score = score;
+			eventBus.queue<WinConditionEvent>(winEvent);
+		}
+	}
+
+	void subscribeEventHandlers() {
+		eventBus.subscribe<WinConditionEvent>(
+			[this](const WinConditionEvent& event) {
+				gameState = 1; // win
+				DebugPrint("You Win! Final Score: " + std::to_string(event.score));
+			});
+	}
+
+	void initHensFromFile(const std::string& filename) {
+		// read actors from file
+		int scoreToWinFromFile = 0;
+		std::vector<Hen*> henActors = LevelManager::ReadFromFile<Hen>(filename, scoreToWinFromFile);
+		// clear existing actors
+		actors->clear();
+		// init hen objects
+		for (int i = 0; i < scoreToWin; i++) {
+			Object* hen = new Object(&psos);
+			Hen* henActor = henActors[i];
+			// load hen model based on type
+			int r = henActor->type;
+			switch (r) {
+			case 0:
+				hen->loadGEM(core, HEN_BROWN, "animatedPSO");
+				break;
+			case 1:
+				hen->loadGEM(core, HEN_WHITE, "animatedPSO");
+				break;
+			case 2:
+				hen->loadGEM(core, ROOSTER_DARK, "animatedPSO");
+				break;
+			case 3:
+				hen->loadGEM(core, ROOSTER_BROWN, "animatedPSO");
+				break;
+			}
+			hen->setDiffuseTexture(imageLoader.getImage("AnimalsColorMap"));
+			hen->setNormalTexture(imageLoader.getImage("AnimalsNormalMap"));
+			hen->rotateBy(180.0f, Y_AXIS);
+			hen->scale = Vec3(0.05f, 0.05f, 0.05f);
+			// init hen actor
+			henActor->init(hen);
+			henActor->setPlayer(this->player);
+			henActor->type = r;	// save hen type
+			henActor->position = henActors[i]->position;
+			henActor->rotation = henActors[i]->rotation;
+			henActor->scale = henActors[i]->scale;
+			// subscribe to events
+			henActor->subscribeEvent(&eventBus);
+			// add hitbox
+			hitboxManager.addHitbox(henActor, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.5f, 0.5f, 0.5f));
+			this->actors->addActor(henActor);
+		}
+		// set score to win
+		this->scoreToWin = scoreToWinFromFile;
+	}
 };
+

@@ -8,6 +8,11 @@
 #include <memory>
 
 
+#define PLAYER_WALK_SPEED 6.0f
+#define PLAYER_RUN_SPEED 12.0f
+#define HEN_SPEED 10.0f
+
+
 class Actor {
 protected:
 	Sequencer sequencer;
@@ -16,21 +21,20 @@ protected:
 	Object* object;
 
 public:
-	Vec3 position;
-	Vec4 rotation;
-	Vec3 scale;
+	Vec3 position = Vec3(0.0f, 0.0f, 0.0f);
+	Vec4 rotation = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	Vec3 scale = Vec3(1.0f, 1.0f, 1.0f);
 	Mat4 worldMatrix;
 
 	float speed = 0.0f;
 	Vec3 forward = Vec3(0.0f, 0.0f, 1.0f);
 	Vec3 right = Vec3(1.0f, 0.0f, 0.0f);
 	Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
+
+	int type = 0;
 	
 	virtual void init(Object* obj) {
 		object = obj;
-		position = Vec3(0.0f, 0.0f, 0.0f);
-		rotation = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-		scale = Vec3(1.0f, 1.0f, 1.0f);
 		sequencer = Sequencer();
 		sequencer.addAllAnimations(&object->animation, 0.0f, 0.0f, 1.0f);
 		stateMachine = StateMachine(&sequencer);
@@ -122,7 +126,7 @@ public:
 		control(dt);
 
 		// change state based on speed
-		if (speed > 6.0f) {
+		if (speed > PLAYER_WALK_SPEED) {
 			stateMachine.transitionTo("run", 0.3f);
 		}
 		else if (speed > 0.1f) {
@@ -146,19 +150,19 @@ public:
 
 	void control(float dt) {
 		// update camera
-		camera->control(win, dt);
 		camera->bindTragetAt(position + Vec3(0.0f, 4.0f, 0.0f));
+		camera->control(win, dt);
 		// when any movement key is pressed, update forward and right vector
 		if (win->keys['W'] || win->keys['A'] || win->keys['S'] || win->keys['D']) {
 			if (win->keys[VK_SHIFT] && !isCatching) {
 				// running
 				speed += 20.0f * dt;
-				if (speed > 12.0f) speed = 12.0f;
+				if (speed > PLAYER_RUN_SPEED) speed = PLAYER_RUN_SPEED;
 			}
 			else {
 				// walking
 				speed += 10.0f * dt;
-				if (speed > 6.0f) speed = 6.0f;
+				if (speed > PLAYER_WALK_SPEED) speed = PLAYER_WALK_SPEED;
 			}
 			if (win->keys['W']) forward += camera->getForwardVector();
 			if (win->keys['S']) forward -= camera->getForwardVector();
@@ -219,7 +223,6 @@ public:
 		eventBus->subscribe<HenCatchedEvent>(
 			[this](const HenCatchedEvent& event) {
 				isCatching = true;
-				DebugPrint("is catching: " + std::to_string(isCatching));
 			}
 		);
 	}
@@ -252,8 +255,12 @@ public:
 		if (!isCatched) {
 			// control player movement
 			position += forward * dt * speed;
-			if (dist < 10.0f && !isScared) {
-				isScared = true;	
+			if (dist < 15.0f && !isScared) {
+				// if player is moving fast or very close, get scared
+				if (player->speed > PLAYER_WALK_SPEED)
+					isScared = true;
+				else if (dist < 5.0f)
+					isScared = true;
 			}
 			else if (dist >= 20.0f && isScared) {
 				isScared = false;
@@ -261,11 +268,11 @@ public:
 			// if scared, move away from player
 			if (isScared) {
 				speed += 10.0f * dt;
-				if (speed > 10.0f) speed = 10.0f;
+				if (speed > HEN_SPEED) speed = HEN_SPEED;
 				Vec3 dir = position - player->position;
 				dir.v[1] = 0.0f; // keep on ground
 				dir = dir.normalize();
-				if (dir.Dot(forward) < -0.5f)
+				if (dir.Dot(forward) < 0.0f)
 					forward = dir;
 				Vec4 rot = quatFromTo(Vec3(0.0f, 0.0f, 1.0f), forward);
 				rotation = slerp(rotation, rot, dt * 10.0f);
@@ -365,37 +372,48 @@ public:
 
 
 class ActorList {
-private:
-	struct ActorNode {
-		Actor* actor;
-		ActorNode* next;
-	};
-
 public:
-	ActorNode* head;
+	std::vector<Actor*> actors;
 
-	ActorList() : head(nullptr) {}
+	int numActors = 0;
+
+	ActorList() {}
 
 	void addActor(Actor* actor) {
-		ActorNode* newNode = new ActorNode();
-		newNode->actor = actor;
-		newNode->next = head;
-		head = newNode;
+		actors.push_back(actor);
+		numActors++;
 	}
 
 	void update(float dt) {
-		ActorNode* current = head;
-		while (current != nullptr) {
-			current->actor->update(dt);
-			current = current->next;
+		for (auto& actor : actors) {
+			actor->update(dt);
 		}
 	}
 
 	void draw(Core* core) {
-		ActorNode* current = head;
-		while (current != nullptr) {
-			current->actor->draw(core);
-			current = current->next;
+		for (auto& actor : actors) {
+			actor->draw(core);
 		}
+	}
+
+	Actor* getActorAt(int index) {
+		if (index < 0 || index >= numActors) return nullptr;
+		return actors[index];
+	}
+
+	void addToList(Actor* actor) {
+		addActor(actor);
+	}
+
+	template<typename T>
+	void addToList(const std::vector<T*>& actorList) {
+		for (auto& actor : actorList) {
+			addActor(actor);
+		}
+	}
+
+	void clear() {
+		actors.clear();
+		numActors = 0;
 	}
 };

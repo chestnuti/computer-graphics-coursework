@@ -102,3 +102,9 @@ struct HenCatchedEvent : public Event {
     Actor* hen;
     Actor* player;
 };
+
+// Win Condition Event
+struct WinConditionEvent : public Event {
+    Actor* player;
+    int score;
+};
